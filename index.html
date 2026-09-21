@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>Campus Navigator</title>
+    <title>Campus Route Navigator</title>
     
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -48,7 +48,7 @@
     <!-- Top Navigation Bar -->
     <div class="absolute top-0 left-0 right-0 h-16 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-md z-40 flex items-center justify-between px-4">
         <h1 class="text-xl font-bold text-blue-700 dark:text-blue-400">
-            <i class="fa-solid fa-map-location-dot mr-2"></i>Campus Route Finder
+            <i class="fa-solid fa-map-location-dot mr-2"></i>Campus Navigator
         </h1>
         <div class="flex gap-4">
             <button onclick="toggleLayers()" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 transition">
@@ -82,29 +82,40 @@
         </div>
 
         <div class="p-4 border-b dark:border-gray-700">
-            <input type="text" id="searchInput" placeholder="Search Canteen, Admin..." 
+            <input type="text" id="searchInput" placeholder="Search locations, faculties..." 
                 class="w-full p-3 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition mb-3"
                 onkeyup="filterLocations()">
+                
+            <div class="flex flex-wrap gap-2 overflow-x-auto pb-1" id="categoryChips">
+                <button onclick="setCategory('All')" class="chip active px-3 py-1 rounded-full text-sm font-semibold bg-blue-600 text-white">All</button>
+                <button onclick="setCategory('Academic')" class="chip px-3 py-1 rounded-full text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Academic</button>
+                <button onclick="setCategory('Admin')" class="chip px-3 py-1 rounded-full text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Admin</button>
+                <button onclick="setCategory('Services')" class="chip px-3 py-1 rounded-full text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Services</button>
+            </div>
         </div>
 
         <!-- Location List / Details -->
         <div id="sidebarContent" class="flex-1 overflow-y-auto p-4">
             <div id="locationList" class="space-y-3"></div>
             <div id="locationDetails" class="hidden h-full flex flex-col">
-                <button onclick="showList()" class="mb-4 text-blue-600 dark:text-blue-400 font-semibold hover:underline">
-                    <i class="fa-solid fa-arrow-left mr-2"></i>Back to list
+                <button onclick="showList()" class="mb-4 text-blue-600 dark:text-blue-400 font-semibold hover:underline flex items-center">
+                    <i class="fa-solid fa-arrow-left mr-2"></i> Back to list
                 </button>
-                <h2 id="detailTitle" class="text-2xl font-bold mb-2"></h2>
-                <span id="detailCategory" class="text-sm font-bold px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md w-max mb-4"></span>
+                
+                <div class="flex items-center gap-3 mb-2">
+                    <div id="detailIcon" class="w-12 h-12 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-xl"></div>
+                    <h2 id="detailTitle" class="text-2xl font-bold"></h2>
+                </div>
+                
+                <span id="detailCategory" class="text-sm font-bold px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md w-max mb-4 block mt-2"></span>
                 <p id="detailDesc" class="text-gray-600 dark:text-gray-300 mb-4"></p>
                 
                 <h3 class="font-bold mb-2 border-b pb-1 dark:border-gray-700">Facilities</h3>
                 <div id="detailFacilities" class="flex flex-wrap gap-2 mb-6"></div>
                 
                 <div class="mt-auto">
-                    <!-- The Start Button you requested -->
-                    <button id="routeBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-md">
-                        <i class="fa-solid fa-play mr-2"></i>Start Route Here
+                    <button id="routeBtn" class="w-full bg-green-600 hover:bg-green-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-md flex items-center justify-center">
+                        <i class="fa-solid fa-play mr-2"></i> Start Route Here
                     </button>
                 </div>
             </div>
@@ -117,15 +128,11 @@
     <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
     <script>
-        // --- 1. Map Initialization (Locked to Campus) ---
+        // --- 1. Map Initialization (Locked to Campus bounds) ---
         const map = L.map('map', { zoomControl: false }).setView([6.9015, 79.8600], 17);
         L.control.zoom({ position: 'topright' }).addTo(map);
 
-        // Map Lock (Campus Bounds)
-        const campusBounds = L.latLngBounds(
-            L.latLng(6.896, 79.855),
-            L.latLng(6.906, 79.865) 
-        );
+        const campusBounds = L.latLngBounds(L.latLng(6.896, 79.855), L.latLng(6.906, 79.865));
         map.setMaxBounds(campusBounds);
         map.on('drag', function() { map.panInsideBounds(campusBounds, { animate: false }); });
 
@@ -143,26 +150,38 @@
         }
 
         // --- 3. User Location Tracker (Default: Admin Office) ---
-        let userLat = 6.9015; // Admin Office latitude
-        let userLng = 79.8590; // Admin Office longitude
+        let userLat = 6.9008; // Admin/Dean's Office Latitude
+        let userLng = 79.8596; // Admin/Dean's Office Longitude
         
-        // GPS Tracking (If available on phone, it will update automatically)
         map.locate({setView: false, watch: true, enableHighAccuracy: true});
-        map.on('locationfound', function(e) {
-            userLat = e.latlng.lat;
-            userLng = e.latlng.lng;
-        });
+        map.on('locationfound', function(e) { userLat = e.latlng.lat; userLng = e.latlng.lng; });
 
-        // --- 4. Locations Data (Added Admin & Canteen) ---
+        // --- 4. Locations Data (Full list with Icons) ---
         const locations = [
-            { id: 1, lat: 6.9015, lng: 79.8590, name: "Admin Office", category: "Admin", desc: "Main administration block.", facilities: ["Offices", "Inquiry"] },
-            { id: 2, lat: 6.9030, lng: 79.8610, name: "Main Canteen", category: "Services", desc: "Student cafeteria and food court.", facilities: ["Food", "Drinks", "Seating"] },
-            { id: 3, lat: 6.9012, lng: 79.8595, name: "Student Service Centre", category: "Services", desc: "Main student inquiries.", facilities: ["Inquiry Desk"] },
-            { id: 7, lat: 6.9025, lng: 79.8590, name: "Chemistry Lecture Theatre", category: "Academic", desc: "Main lecture hall.", facilities: ["Projector"] },
-            { id: 21, lat: 6.9025, lng: 79.8620, name: "UCSC Building", category: "Academic", desc: "School of Computing.", facilities: ["Labs", "Library"] }
+            { id: 1, lat: 6.9012, lng: 79.8595, name: "Student Service Centre", icon: "fa-users", category: "Services", desc: "Main student inquiries and administrative services.", facilities: ["Inquiry Desk", "Waiting Area"] },
+            { id: 2, lat: 6.9010, lng: 79.8585, name: "Department of Nuclear Science", icon: "fa-atom", category: "Academic", desc: "Nuclear science research and laboratories.", facilities: ["Research Labs"] },
+            { id: 3, lat: 6.9014, lng: 79.8588, name: "Department of Statistics", icon: "fa-chart-pie", category: "Academic", desc: "Main statistics and data science building.", facilities: ["Computer Labs", "Lectures"] },
+            { id: 4, lat: 6.9018, lng: 79.8587, name: "Climate Change Lab", icon: "fa-cloud-sun", category: "Research", desc: "Research center for climate studies.", facilities: ["Research Labs"] },
+            { id: 5, lat: 6.9022, lng: 79.8586, name: "Department of Plant Sciences", icon: "fa-leaf", category: "Academic", desc: "Botany and plant sciences department.", facilities: ["Labs", "Greenhouse"] },
+            { id: 6, lat: 6.9018, lng: 79.8592, name: "Department of Zoology", icon: "fa-frog", category: "Academic", desc: "Zoology and environment sciences.", facilities: ["Labs", "Lecture Halls"] },
+            { id: 7, lat: 6.9025, lng: 79.8590, name: "Chemistry Lecture Theatre", icon: "fa-chalkboard-user", category: "Academic", desc: "Main lecture hall for the Department of Chemistry.", facilities: ["Projector", "AC"] },
+            { id: 8, lat: 6.9030, lng: 79.8595, name: "Department of Chemistry", icon: "fa-flask", category: "Academic", desc: "Main chemistry faculty building.", facilities: ["Labs", "Offices"] },
+            { id: 10, lat: 6.9026, lng: 79.8598, name: "Information & Learning Centre", icon: "fa-book-open-reader", category: "Services", desc: "Library and learning spaces.", facilities: ["Library", "Study Areas", "WiFi"] },
+            { id: 11, lat: 6.9021, lng: 79.8601, name: "Natural History Museum", icon: "fa-building-columns", category: "Academic", desc: "University museum housing zoological specimens.", facilities: ["Exhibits", "Guided Tours"] },
+            { id: 12, lat: 6.9008, lng: 79.8596, name: "Dean's & Admin Office", icon: "fa-user-tie", category: "Admin", desc: "Administration and Dean's office.", facilities: ["Offices", "Administration"] },
+            { id: 14, lat: 6.9027, lng: 79.8605, name: "King George's Hall (KGH)", icon: "fa-landmark", category: "Theatres", desc: "Historical university hall.", facilities: ["Stage", "Seating"] },
+            { id: 16, lat: 6.9020, lng: 79.8615, name: "Department of Physics", icon: "fa-magnet", category: "Academic", desc: "Physics laboratories and faculty offices.", facilities: ["Labs", "Workshops"] },
+            { id: 17, lat: 6.9015, lng: 79.8605, name: "Department of Mathematics", icon: "fa-calculator", category: "Academic", desc: "Mathematics department and lecture halls.", facilities: ["Classrooms", "Offices"] },
+            { id: 19, lat: 6.9015, lng: 79.8610, name: "New Arts Theatre (NAT)", icon: "fa-masks-theater", category: "Theatres", desc: "Large auditorium for university events.", facilities: ["Stage", "Sound System", "Seating: 500+"] },
+            { id: 20, lat: 6.9022, lng: 79.8612, name: "Samaranayake Auditorium", icon: "fa-microphone-lines", category: "Theatres", desc: "Memorial auditorium for academic events.", facilities: ["Stage", "AC", "Seating"] },
+            { id: 21, lat: 6.9025, lng: 79.8620, name: "UCSC Building", icon: "fa-laptop-code", category: "Academic", desc: "University of Colombo School of Computing.", facilities: ["Computer Labs", "Library"] },
+            { id: 23, lat: 6.9018, lng: 79.8625, name: "Medical Centre", icon: "fa-house-medical", category: "Services", desc: "University healthcare and emergency services.", facilities: ["First Aid", "Doctor on call", "Pharmacy"] },
+            { id: 24, lat: 6.9005, lng: 79.8600, name: "Main Canteen", icon: "fa-utensils", category: "Services", desc: "Student cafeteria and food court.", facilities: ["Food", "Drinks", "Seating"] }
         ];
 
-        // Draw Markers
+        let activeCategory = 'All';
+
+        // Add markers
         locations.forEach(loc => {
             const marker = L.marker([loc.lat, loc.lng]).addTo(map);
             marker.bindPopup(`<b>${loc.name}</b>`);
@@ -172,10 +191,24 @@
         function renderList(data) {
             const listEl = document.getElementById('locationList');
             listEl.innerHTML = '';
+            
+            if(data.length === 0) {
+                listEl.innerHTML = '<p class="text-gray-500 text-center mt-10">No locations found.</p>';
+                return;
+            }
+
             data.forEach(loc => {
                 const item = document.createElement('div');
-                item.className = "p-4 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 border shadow-sm";
-                item.innerHTML = `<h3 class="font-bold">${loc.name}</h3><span class="text-xs text-blue-500">${loc.category}</span>`;
+                item.className = "flex items-center gap-4 p-4 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 border shadow-sm transition";
+                item.innerHTML = `
+                    <div class="w-10 h-10 flex-shrink-0 flex items-center justify-center bg-blue-100 text-blue-600 rounded-full text-lg">
+                        <i class="fa-solid ${loc.icon}"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 dark:text-gray-200">${loc.name}</h3>
+                        <span class="text-xs text-blue-500 font-semibold">${loc.category}</span>
+                    </div>
+                `;
                 item.onclick = () => { map.flyTo([loc.lat, loc.lng], 18); openDetail(loc); };
                 listEl.appendChild(item);
             });
@@ -183,20 +216,35 @@
 
         function filterLocations() {
             const term = document.getElementById('searchInput').value.toLowerCase();
-            const filtered = locations.filter(loc => loc.name.toLowerCase().includes(term));
+            const filtered = locations.filter(loc => 
+                (activeCategory === 'All' || loc.category === activeCategory) &&
+                (loc.name.toLowerCase().includes(term) || loc.category.toLowerCase().includes(term))
+            );
             renderList(filtered);
+        }
+
+        function setCategory(cat) {
+            activeCategory = cat;
+            document.querySelectorAll('.chip').forEach(c => {
+                c.classList.remove('bg-blue-600', 'text-white');
+                c.classList.add('bg-gray-200', 'text-gray-700', 'dark:bg-gray-700', 'dark:text-gray-200');
+            });
+            event.target.classList.remove('bg-gray-200', 'text-gray-700', 'dark:bg-gray-700', 'dark:text-gray-200');
+            event.target.classList.add('bg-blue-600', 'text-white');
+            filterLocations();
         }
 
         function openDetail(loc) {
             document.getElementById('locationList').classList.add('hidden');
             document.getElementById('locationDetails').classList.remove('hidden');
+            
             document.getElementById('detailTitle').innerText = loc.name;
+            document.getElementById('detailIcon').innerHTML = `<i class="fa-solid ${loc.icon}"></i>`;
             document.getElementById('detailCategory').innerText = loc.category;
             document.getElementById('detailDesc').innerText = loc.desc;
             
             document.getElementById('detailFacilities').innerHTML = loc.facilities.map(f => `<span class="px-2 py-1 bg-blue-100 text-blue-700 rounded-full text-xs font-semibold">${f}</span>`).join('');
             
-            // Attach Start Route action
             document.getElementById('routeBtn').onclick = () => showRoute(loc.lat, loc.lng);
             document.getElementById('sidebar').classList.add('open');
         }
@@ -208,34 +256,31 @@
 
         function toggleDrawer() { document.getElementById('sidebar').classList.toggle('open'); }
 
-        // --- 5. Routing Logic (Draws path from Admin/GPS to Selected Place) ---
+        // --- 5. Routing Logic ---
         let routingControl = null;
 
         window.showRoute = function(destLat, destLng) {
             if (routingControl) { map.removeControl(routingControl); }
             
             document.getElementById('floating-route-info').classList.remove('hidden');
-            document.getElementById('route-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> පාර හොයමින් පවතී...';
+            document.getElementById('route-text').innerHTML = '<i class="fa-solid fa-spinner fa-spin"></i> Calculating route...';
 
             routingControl = L.Routing.control({
                 waypoints: [ L.latLng(userLat, userLng), L.latLng(destLat, destLng) ],
-                router: L.Routing.osrmv1({ language: 'en', profile: 'foot' }), // Walking path inside campus
-                lineOptions: { styles: [{color: '#16a34a', opacity: 0.9, weight: 6}] }, // Green line
+                router: L.Routing.osrmv1({ language: 'en', profile: 'foot' }),
+                lineOptions: { styles: [{color: '#16a34a', opacity: 0.9, weight: 6}] },
                 fitSelectedRoutes: true, 
                 show: false, addWaypoints: false,
-                createMarker: function(i, wp, nWps) {
-                    // Only show marker for destination if needed, or hide them
-                    return null; 
-                }
+                createMarker: function() { return null; }
             }).on('routesfound', function(e) {
                 let summary = e.routes[0].summary;
                 let dist = summary.totalDistance < 1000 ? Math.round(summary.totalDistance) + ' m' : (summary.totalDistance / 1000).toFixed(1) + ' km';
                 let time = Math.round(summary.totalTime / 60) + ' min';
                 
-                document.getElementById('route-text').innerHTML = `🚶 දුර: ${dist} | ⏱️ වෙලාව: ${time}`;
+                // English UI Text
+                document.getElementById('route-text').innerHTML = `🚶 Distance: ${dist} | ⏱️ Time: ${time}`;
             }).addTo(map);
 
-            // Close sidebar to see the map clearly
             if(window.innerWidth < 768) { document.getElementById('sidebar').classList.remove('open'); }
         };
 
@@ -244,18 +289,20 @@
             document.getElementById('floating-route-info').classList.add('hidden');
         }
 
+        // --- 6. Dark Mode ---
         function toggleDarkMode() {
             document.documentElement.classList.toggle('dark');
             const icon = document.getElementById('theme-icon');
             if(document.documentElement.classList.contains('dark')) {
                 icon.classList.replace('fa-moon', 'fa-sun');
-                if(currentLayer === 'streets') toggleLayers(); toggleLayers();
+                if(currentLayer === 'streets') { toggleLayers(); toggleLayers(); }
             } else {
                 icon.classList.replace('fa-sun', 'fa-moon');
-                if(currentLayer === 'dark') toggleLayers();
+                if(currentLayer === 'dark') { toggleLayers(); }
             }
         }
 
+        // Init list
         renderList(locations);
     </script>
 </body>
