@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>University of Colombo - Faculty of Science Map</title>
   
   <!-- Tailwind CSS -->
@@ -43,14 +43,41 @@
   </script>
 
   <style>
-    body { margin: 0; padding: 0; overflow: hidden; }
-    #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; background-color: #f8fafc; }
+    /* Fullscreen fixes for Chrome & Mobile Browsers */
+    html, body {
+      margin: 0;
+      padding: 0;
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      position: fixed;
+    }
+    #map {
+      width: 100%;
+      height: 100%;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      background-color: #f8fafc;
+    }
     
     .dark body { background-color: #0f172a; }
     .dark #map { background-color: #0b0f19 !important; }
-    .leaflet-container { background: #f8fafc !important; }
+    .leaflet-container { background: #f8fafc !important; font-family: 'Inter', sans-serif; }
     .dark .leaflet-container { background: #0b0f19 !important; }
     
+    /* Mobile responsive drawer adjustments */
+    @media (max-width: 768px) {
+      #sidebar {
+        height: 75vh !important;
+        max-height: 75vh !important;
+        border-radius: 24px 24px 0 0 !important;
+        bottom: 0 !important;
+        top: auto !important;
+      }
+    }
+
     /* Custom Marker Styling */
     .custom-marker {
       display: flex;
@@ -130,12 +157,7 @@
     .leaflet-popup-close-button:hover {
       background: rgba(0,0,0,0.45) !important;
     }
-    .leaflet-popup-tip {
-      display: none;
-    }
-    .leaflet-container {
-      font-family: 'Inter', sans-serif;
-    }
+    .leaflet-popup-tip { display: none; }
 
     /* Hide default routing UI */
     .leaflet-routing-container { display: none !important; }
@@ -148,13 +170,13 @@
     ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
   </style>
 </head>
-<body class="font-sans antialiased text-slate-800 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 flex h-screen w-screen overflow-hidden">
+<body class="font-sans antialiased text-slate-800 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 flex flex-col md:flex-row h-screen w-screen overflow-hidden">
 
   <!-- Mobile Backdrop Overlay -->
   <div id="sidebarBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity opacity-0 pointer-events-none md:hidden"></div>
 
   <!-- Responsive Sidebar -->
-  <aside id="sidebar" class="fixed md:relative top-0 bottom-0 left-0 z-40 w-[88vw] sm:w-96 md:w-96 bg-white dark:bg-slate-900 shadow-2xl flex flex-col h-full shrink-0 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0">
+  <aside id="sidebar" class="fixed md:relative bottom-0 left-0 right-0 z-40 w-full md:w-96 bg-white dark:bg-slate-900 shadow-2xl flex flex-col h-[75vh] md:h-full shrink-0 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out -translate-y-full md:translate-y-0 md:-translate-x-full">
     
     <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 text-white flex flex-col justify-between shadow-sm">
       <div class="flex items-center justify-between gap-3">
@@ -273,7 +295,6 @@
   <script>
     lucide.createIcons();
 
-    // All 23 Locations
     const locations = [
       { id: '1', name: 'Student Service Centre (Upcoming)', category: 'Services', lat: 6.8990, lng: 79.8591, icon: 'users', color: '#eab308', description: 'Upcoming Student Service Centre (Building 1)', features: ['Student Services', 'Help Desk'] },
       { id: '2', name: 'Department of Nuclear Science', category: 'Academic', lat: 6.8994, lng: 79.8587, icon: 'atom', color: '#d97706', description: 'Department of Nuclear Science (Building 2)', features: ['Laboratories', 'Research'] },
@@ -306,7 +327,6 @@
     let isDarkMode = false;
     let userLocationMarker = null;
     
-    // Default start location (Main Gate / Entrance area, will auto-update if GPS is found)
     let userLat = 6.8990; 
     let userLng = 79.8591;
 
@@ -326,7 +346,6 @@
 
     mapLayers.streets.addTo(map);
 
-    // Auto-fetch user live GPS location on startup
     if (navigator.geolocation) {
       navigator.geolocation.watchPosition(pos => {
         userLat = pos.coords.latitude;
@@ -336,7 +355,6 @@
           icon: L.divIcon({ className: 'user-gps-marker', html: `<div class="user-gps-pulse"></div>`, iconSize: [20, 20] }) 
         }).addTo(map);
       }, err => {
-        // Fallback to Main Gate if GPS fails
         userLat = 6.8990;
         userLng = 79.8591;
       }, { enableHighAccuracy: true });
@@ -460,19 +478,27 @@
     });
 
     function openSidebar() {
-      document.getElementById('sidebar').classList.remove('-translate-x-full');
+      const sb = document.getElementById('sidebar');
+      sb.classList.remove('-translate-y-full', 'md:-translate-x-full');
       document.getElementById('sidebarBackdrop').classList.replace('opacity-0', 'opacity-100');
       document.getElementById('sidebarBackdrop').classList.remove('pointer-events-none');
     }
 
     function closeSidebar() {
-      document.getElementById('sidebar').classList.add('-translate-x-full');
+      const sb = document.getElementById('sidebar');
+      if (window.innerWidth < 768) {
+        sb.classList.add('-translate-y-full');
+      } else {
+        sb.classList.add('md:-translate-x-full');
+      }
       document.getElementById('sidebarBackdrop').classList.replace('opacity-100', 'opacity-0');
       document.getElementById('sidebarBackdrop').classList.add('pointer-events-none');
     }
 
     document.getElementById('openSidebarBtn').addEventListener('click', () => {
-      document.getElementById('sidebar').classList.contains('-translate-x-full') ? openSidebar() : closeSidebar();
+      const sb = document.getElementById('sidebar');
+      const isClosed = window.innerWidth < 768 ? sb.classList.contains('-translate-y-full') : sb.classList.contains('md:-translate-x-full');
+      if (isClosed) openSidebar(); else closeSidebar();
     });
     document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
     document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
@@ -531,7 +557,6 @@
     document.getElementById('zoomOutBtn').addEventListener('click', () => map.zoomOut());
     document.getElementById('resetMapBtn').addEventListener('click', () => { map.closePopup(); map.flyTo(MAP_CENTER, 18); });
 
-    // Routing Logic
     let routingControl = null;
 
     window.startRoute = function(destLat, destLng) {
