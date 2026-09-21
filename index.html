@@ -1,639 +1,315 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>University of Colombo - Faculty of Science Map</title>
-  
-  <!-- Tailwind CSS -->
-  <script src="https://cdn.tailwindcss.com"></script>
-  
-  <!-- Google Fonts: Inter -->
-  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-  
-  <!-- Leaflet CSS & JS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  
-  <!-- Lucide Icons -->
-  <script src="https://unpkg.com/lucide@latest"></script>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>UOC Science Faculty - Interactive Map</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Leaflet CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <!-- Leaflet Routing Machine CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+    
+    <!-- Font Awesome -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
 
-  <script>
-    tailwind.config = {
-      darkMode: 'class',
-      theme: {
-        extend: {
-          fontFamily: { sans: ['Inter', 'sans-serif'] },
-          colors: {
-            brand: {
-              50: '#f0f9ff',
-              100: '#e0f2fe',
-              500: '#0ea5e9',
-              600: '#0284c7',
-              700: '#0369a1',
-              900: '#0c4a6e'
+    <style>
+        body, html { margin: 0; padding: 0; height: 100%; overflow: hidden; }
+        #map { height: 100vh; width: 100vw; z-index: 10; }
+        
+        /* Mobile Drawer styles */
+        #sidebar { transition: transform 0.3s ease-in-out; z-index: 50; }
+        @media (max-width: 768px) {
+            #sidebar {
+                position: fixed; top: auto; bottom: 0; left: 0; right: 0; width: 100%; height: 75vh;
+                transform: translateY(100%); border-radius: 20px 20px 0 0;
             }
-          }
+            #sidebar.open { transform: translateY(0); }
         }
-      }
-    }
-  </script>
 
-  <style>
-    body { margin: 0; padding: 0; overflow: hidden; }
-    #map { width: 100%; height: 100%; position: absolute; top: 0; left: 0; z-index: 10; background-color: #f8fafc; }
-    
-    .dark body { background-color: #0f172a; }
-    .dark #map { background-color: #0b0f19 !important; }
-    .leaflet-container { background: #f8fafc !important; }
-    .dark .leaflet-container { background: #0b0f19 !important; }
-    
-    /* Custom Marker Styling */
-    .custom-marker {
-      display: flex;
-      flex-direction: column;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
-    }
-    .custom-marker:hover {
-      transform: scale(1.2) translateY(-4px);
-      z-index: 50 !important;
-    }
-    
-    .marker-pin {
-      width: 34px;
-      height: 34px;
-      border: 2.5px solid white;
-      border-radius: 50%;
-      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      color: white;
-      transition: all 0.2s ease;
-    }
-    
-    .marker-pointer {
-      width: 0;
-      height: 0;
-      border-left: 5px solid transparent;
-      border-right: 5px solid transparent;
-      border-top: 7px solid currentColor;
-      margin-top: -2px;
-    }
+        /* Dark mode overrides */
+        .dark #sidebar { background-color: #1f2937; color: white; }
+        .dark .leaflet-popup-content-wrapper { background-color: #374151; color: white; }
+        .dark .leaflet-popup-tip { background-color: #374151; }
 
-    /* Pulse animation for User GPS location */
-    .user-gps-pulse {
-      width: 20px;
-      height: 20px;
-      background: #0284c7;
-      border: 3px solid white;
-      border-radius: 50%;
-      box-shadow: 0 0 0 rgba(2, 132, 199, 0.6);
-      animation: pulseGps 2s infinite;
-    }
-    @keyframes pulseGps {
-      0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7); }
-      70% { box-shadow: 0 0 0 16px rgba(2, 132, 199, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
-    }
+        /* Hide default routing text box */
+        .leaflet-routing-container { display: none !important; }
+    </style>
 
-    /* Leaflet Popup overrides with Dark Mode support */
-    .leaflet-popup-content-wrapper {
-      border-radius: 14px;
-      padding: 0;
-      box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.25);
-      border: none;
-      overflow: hidden;
-    }
-    .dark .leaflet-popup-content-wrapper {
-      background-color: #1e293b;
-      color: #f8fafc;
-      box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.6);
-    }
-    .leaflet-popup-content {
-      margin: 0 !important;
-      width: 260px !important;
-    }
-    .leaflet-popup-close-button {
-      color: white !important;
-      font-size: 18px !important;
-      padding: 4px 8px !important;
-      border-radius: 0 12px 0 12px;
-      background: rgba(0,0,0,0.25) !important;
-    }
-    .leaflet-popup-close-button:hover {
-      background: rgba(0,0,0,0.45) !important;
-    }
-    .leaflet-popup-tip {
-      display: none;
-    }
-    .leaflet-container {
-      font-family: 'Inter', sans-serif;
-    }
-
-    /* Custom scrollbar */
-    ::-webkit-scrollbar { width: 5px; height: 5px; }
-    ::-webkit-scrollbar-track { background: transparent; }
-    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
-    .dark ::-webkit-scrollbar-thumb { background: #334155; }
-    ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
-  </style>
+    <script>
+        tailwind.config = { darkMode: 'class' }
+    </script>
 </head>
-<body class="font-sans antialiased text-slate-800 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 flex h-screen w-screen overflow-hidden">
+<body class="bg-gray-100 dark:bg-gray-900 text-gray-800 dark:text-gray-200">
 
-  <!-- Mobile Backdrop Overlay -->
-  <div id="sidebarBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity opacity-0 pointer-events-none md:hidden"></div>
-
-  <!-- Responsive Sidebar (Drawer on mobile, collapsible on desktop) -->
-  <aside id="sidebar" class="fixed md:relative top-0 bottom-0 left-0 z-40 w-[88vw] sm:w-96 md:w-96 bg-white dark:bg-slate-900 shadow-2xl flex flex-col h-full shrink-0 border-r border-slate-200 dark:border-slate-800 transition-transform duration-300 ease-in-out -translate-x-full md:translate-x-0">
-    
-    <!-- Sidebar Header with Actions -->
-    <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 text-white flex flex-col justify-between shadow-sm">
-      <div class="flex items-center justify-between gap-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shadow-inner">
-            <i data-lucide="graduation-cap" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
-          </div>
-          <div>
-            <h1 class="text-base sm:text-lg font-bold tracking-tight leading-tight">UoC Science</h1>
-            <p class="text-[11px] sm:text-xs text-brand-100 font-medium">Faculty Campus Navigator</p>
-          </div>
+    <!-- Top Navigation Bar -->
+    <div class="absolute top-0 left-0 right-0 h-16 bg-white/90 dark:bg-gray-800/90 backdrop-blur-md shadow-md z-40 flex items-center justify-between px-4">
+        <h1 class="text-xl font-bold text-blue-700 dark:text-blue-400">
+            <i class="fa-solid fa-graduation-cap mr-2"></i>Science Faculty Map
+        </h1>
+        <div class="flex gap-4">
+            <!-- Layers Button -->
+            <button onclick="toggleLayers()" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 transition">
+                <i class="fa-solid fa-layer-group"></i>
+            </button>
+            <!-- Dark Mode Button -->
+            <button onclick="toggleDarkMode()" class="p-2 rounded-full bg-gray-200 dark:bg-gray-700 hover:bg-gray-300 transition">
+                <i id="theme-icon" class="fa-solid fa-moon"></i>
+            </button>
+            <!-- Mobile Menu Toggle Button -->
+            <button onclick="toggleDrawer()" class="md:hidden p-2 rounded-full bg-blue-600 text-white hover:bg-blue-700 transition">
+                <i class="fa-solid fa-bars"></i>
+            </button>
         </div>
-
-        <!-- Quick Top Controls: Theme toggle & Close button -->
-        <div class="flex items-center gap-1.5">
-          <button id="themeToggleBtn" title="Toggle Dark/Light Mode" class="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition active:scale-95">
-            <i id="themeIcon" data-lucide="moon" class="w-4 h-4"></i>
-          </button>
-          <button id="closeSidebarBtn" title="Collapse Sidebar" class="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition active:scale-95">
-            <i data-lucide="x" class="w-4 h-4 sm:w-4 sm:h-4"></i>
-          </button>
-        </div>
-      </div>
-      <p class="text-[11px] text-white/80 mt-2.5 hidden sm:block">Select any department or hall to zoom and view facilities.</p>
     </div>
 
-    <!-- Search & Category Filters -->
-    <div class="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 flex flex-col gap-2.5">
-      <!-- Search Input -->
-      <div class="relative">
-        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
-        <input type="text" id="searchInput" placeholder="Search buildings, labs, halls..." class="w-full pl-9 pr-8 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-500">
-        <button id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 dark:hover:text-slate-200">
-          <i data-lucide="x-circle" class="w-4 h-4"></i>
-        </button>
-      </div>
-
-      <!-- Horizontal Category Chips -->
-      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
-        <button class="cat-pill active px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-brand-600 text-white shadow-sm" data-category="All">All (<span id="totalCount">23</span>)</button>
-        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Academic">Academic</button>
-        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Lecture Hall">Theatres</button>
-        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Auditorium">Auditoriums</button>
-        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Administration">Admin</button>
-        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Research">Research</button>
-        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Services">Services</button>
-      </div>
-    </div>
-
-    <!-- Location List -->
-    <div class="flex-1 overflow-y-auto p-2.5 sm:p-3" id="locationList">
-      <!-- Locations will be dynamically injected here -->
-    </div>
-
-    <!-- Footer Information -->
-    <div class="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 text-[11px] flex items-center justify-between text-slate-400 dark:text-slate-500">
-      <span>Faculty of Science, Colombo 07</span>
-      <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Live Map</span>
-    </div>
-  </aside>
-
-  <main class="flex-1 relative h-full w-full overflow-hidden">
+    <!-- Map Container -->
     <div id="map"></div>
 
-    <!-- Floating Top-Left Controls (Menu Toggle & Campus Badge) -->
-    <div class="absolute top-4 left-4 z-20 flex items-center gap-2.5">
-      <button id="openSidebarBtn" title="Open Places Menu" class="px-3.5 py-2.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 hover:text-brand-600 dark:hover:text-brand-400 rounded-xl shadow-lg border border-slate-200/80 dark:border-slate-800 flex items-center gap-2 transition active:scale-95 text-xs sm:text-sm font-semibold">
-        <i data-lucide="menu" class="w-4 h-4 text-brand-600 dark:text-brand-400"></i>
-        <span>Explore Places</span>
-      </button>
-
-      <!-- Quick Layer Switcher Dropdown/Pill on desktop/tablet -->
-      <div class="hidden sm:flex items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-1 gap-1 text-xs">
-        <button id="layerStreetBtn" class="layer-btn active px-2.5 py-1.5 rounded-lg font-medium text-white bg-brand-600 transition" onclick="switchMapLayer('streets')">Streets</button>
-        <button id="layerSatBtn" class="layer-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="switchMapLayer('satellite')">Satellite</button>
-        <button id="layerDarkBtn" class="layer-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="switchMapLayer('dark')">Dark Matter</button>
-      </div>
-    </div>
-
-    <!-- Floating Bottom-Right Action Controls -->
-    <div class="absolute bottom-5 right-4 sm:bottom-6 sm:right-6 z-20 flex flex-col items-end gap-2.5">
-      
-      <!-- Mobile Layer Switcher Button -->
-      <div class="sm:hidden">
-        <button id="mobileLayerToggleBtn" title="Change Map View" class="w-11 h-11 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center transition active:scale-95">
-          <i data-lucide="layers" class="w-5 h-5 text-brand-600 dark:text-brand-400"></i>
-        </button>
-      </div>
-
-      <!-- Locate Me (GPS) Button -->
-      <button id="locateMeBtn" title="My Current Location" class="w-11 h-11 sm:w-12 sm:h-12 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:text-brand-600 dark:hover:text-brand-400 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center transition active:scale-95">
-        <i data-lucide="crosshair" class="w-5 h-5"></i>
-      </button>
-
-      <!-- Zoom Controls -->
-      <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
-        <button id="zoomInBtn" title="Zoom In" class="w-11 h-11 sm:w-12 sm:h-12 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-600 dark:hover:text-brand-400 flex items-center justify-center border-b border-slate-100 dark:border-slate-800 transition">
-          <i data-lucide="plus" class="w-5 h-5"></i>
-        </button>
-        <button id="zoomOutBtn" title="Zoom Out" class="w-11 h-11 sm:w-12 sm:h-12 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-600 dark:hover:text-brand-400 flex items-center justify-center transition">
-          <i data-lucide="minus" class="w-5 h-5"></i>
-        </button>
-      </div>
-
-      <!-- Campus Center Reset Button -->
-      <button id="resetMapBtn" title="Reset Campus View" class="w-11 h-11 sm:w-12 sm:h-12 bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-lg shadow-brand-500/30 flex items-center justify-center transition active:scale-95">
-        <i data-lucide="compass" class="w-5 h-5"></i>
-      </button>
-    </div>
-
-    <!-- Notification / Toast Message -->
-    <div id="toastBox" class="fixed top-5 right-5 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 z-50 bg-slate-900/90 dark:bg-white/95 text-white dark:text-slate-900 px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-medium flex items-center gap-2 pointer-events-none transition-all duration-300 opacity-0 translate-y-[-10px]">
-      <i data-lucide="info" class="w-4 h-4 text-brand-400 dark:text-brand-600"></i>
-      <span id="toastMessage">Campus view centered</span>
-    </div>
-  </main>
-
-  <script>
-    // Initialize Lucide Icons
-    lucide.createIcons();
-
-    // Colombo University Science Faculty Locations Data with Real Coordinates (Lat/Lng)
-    const locations = [
-      { id: '1', name: 'Student Service Centre (Upcoming)', category: 'Services', lat: 6.8990, lng: 79.8591, icon: 'users', color: '#eab308', description: 'Upcoming Student Service Centre (Building 1)', features: ['Student Services', 'Help Desk'] },
-      { id: '2', name: 'Department of Nuclear Science', category: 'Academic', lat: 6.8994, lng: 79.8587, icon: 'atom', color: '#d97706', description: 'Department of Nuclear Science (Building 2)', features: ['Laboratories', 'Research'] },
-      { id: '3', name: 'Department of Statistics New Building', category: 'Academic', lat: 6.9001, lng: 79.8588, icon: 'bar-chart-2', color: '#f97316', description: 'Department of Statistics New Building (Building 3)', features: ['Lecture Rooms', 'Labs'] },
-      { id: '4', name: 'Climate Change Research Laboratory', category: 'Research', lat: 6.9005, lng: 79.8589, icon: 'thermometer', color: '#16a34a', description: 'Climate Change Research Laboratory (Building 4)', features: ['Research Lab'] },
-      { id: '5', name: 'Department of Plant Sciences (NBLT)', category: 'Academic', lat: 6.9010, lng: 79.8588, icon: 'leaf', color: '#eab308', description: 'Department of Plant Sciences (Building 5)', features: ['Lecture Theatre', 'Laboratories'] },
-      { id: '6', name: 'Dept of Zoology & Environment Sciences (ZSR)', category: 'Academic', lat: 6.9001, lng: 79.8594, icon: 'bug', color: '#4d7c0f', description: 'Department of Zoology (Building 6)', features: ['Laboratories', 'Research'] },
-      { id: '7', name: 'Chemistry Lecture Theatre (NLT/PLT/CLT)', category: 'Lecture Hall', lat: 6.9011, lng: 79.8594, icon: 'presentation', color: '#be123c', description: 'Chemistry Lecture Theatres (Building 7)', features: ['NLT', 'PLT', 'CLT'] },
-      { id: '8', name: 'Department of Chemistry', category: 'Academic', lat: 6.9014, lng: 79.8597, icon: 'flask-conical', color: '#be123c', description: 'Department of Chemistry (Building 8)', features: ['Laboratories', 'Staff Rooms'] },
-      { id: '9', name: 'ITSC / Tissue Culture Building', category: 'Research', lat: 6.9016, lng: 79.8600, icon: 'microscope', color: '#fde047', description: 'ITSC / Tissue Culture (Building 9)', features: ['ITSC', 'Tissue Culture Lab'] },
-      { id: '10', name: 'Information & Learning Centre', category: 'Library', lat: 6.9011, lng: 79.8600, icon: 'book-open', color: '#38bdf8', description: 'Information and Learning Centre (Building 10)', features: ['Study Areas', 'Computer Lab'] },
-      { id: '11', name: 'Natural History Museum', category: 'Museum', lat: 6.9007, lng: 79.8598, icon: 'library', color: '#15803d', description: 'Natural History Museum (Building 11)', features: ['Exhibitions'] },
-      { id: '12', name: 'Dean\'s Office', category: 'Administration', lat: 6.9007, lng: 79.8601, icon: 'briefcase', color: '#b45309', description: 'Dean\'s Office (Building 12)', features: ['Administration'] },
-      { id: '13', name: 'Dean\'s Office (Annex)', category: 'Administration', lat: 6.9005, lng: 79.8601, icon: 'briefcase', color: '#b45309', description: 'Dean\'s Office Annex (Building 13)', features: ['Administration'] },
-      { id: '14', name: 'King George\'s (KG) Hall', category: 'Auditorium', lat: 6.9011, lng: 79.8604, icon: 'landmark', color: '#5eead4', description: 'King George\'s Hall (Building 14)', features: ['Main Hall', 'Events'] },
-      { id: '15', name: 'New IS & MF Laboratory', category: 'Laboratory', lat: 6.9015, lng: 79.8605, icon: 'monitor', color: '#fca5a5', description: 'New IS & MF Lab (Building 15)', features: ['Computer Labs'] },
-      { id: '16', name: 'Department of Physics (PLR / NPLT)', category: 'Academic', lat: 6.9009, lng: 79.8608, icon: 'zap', color: '#f97316', description: 'Department of Physics (Building 16)', features: ['Physics Labs', 'Lecture Rooms'] },
-      { id: '17', name: 'Department of Mathematics (C22)', category: 'Academic', lat: 6.9003, lng: 79.8603, icon: 'calculator', color: '#4338ca', description: 'Department of Mathematics (Building 17)', features: ['Lecture Rooms', 'Staff Rooms'] },
-      { id: '18', name: 'Department of Statistics', category: 'Academic', lat: 6.9005, lng: 79.8610, icon: 'pie-chart', color: '#c4b5fd', description: 'Department of Statistics Old Building (Building 18)', features: ['Offices'] },
-      { id: '19', name: 'New Arts Theatre (NAT)', category: 'Auditorium', lat: 6.8997, lng: 79.8608, icon: 'mic', color: '#be185d', description: 'New Arts Theatre (Building 19)', features: ['Large Seating', 'Stage'] },
-      { id: '20', name: 'Prof. V.K. Samaranayake Auditorium', category: 'Auditorium', lat: 6.9005, lng: 79.8613, icon: 'users', color: '#c4b5fd', description: 'Prof. V.K. Samaranayake Auditorium (Building 20)', features: ['Auditorium', 'Events'] },
-      { id: '21', name: 'UCSC', category: 'Academic', lat: 6.9008, lng: 79.8615, icon: 'monitor-play', color: '#c4b5fd', description: 'University of Colombo School of Computing (Building 21)', features: ['Computing Labs', 'Lecture Halls'] },
-      { id: '22', name: 'Marshal\'s Office', category: 'Administration', lat: 6.9001, lng: 79.8615, icon: 'shield', color: '#9a3412', description: 'Marshal\'s Office (Building 22)', features: ['Security', 'Administration'] },
-      { id: '23', name: 'Medical Centre', category: 'Health', lat: 6.9002, lng: 79.8617, icon: 'plus-circle', color: '#9a3412', description: 'Medical Centre (Building 23)', features: ['First Aid', 'Doctor'] }
-    ];
-
-    const MAP_CENTER = [6.9006, 79.8601]; 
-    let markers = {};
-    let activeCategory = 'All';
-    let isDarkMode = false;
-    let userLocationMarker = null;
-
-    // Strict boundary for Colombo Science Faculty
-    const strictCampusBounds = L.latLngBounds(
-      [6.8980, 79.8575], // South West 
-      [6.9030, 79.8630]  // North East 
-    );
-
-    // Map Layers definitions
-    const mapLayers = {
-      streets: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
-        attribution: '&copy; Google Maps',
-        maxZoom: 20
-      }),
-      satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', {
-        attribution: '&copy; Google Hybrid Satellite',
-        maxZoom: 20
-      }),
-      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
-        attribution: '&copy; OpenStreetMap & CartoDB',
-        subdomains: 'abcd',
-        maxZoom: 20
-      })
-    };
-
-    let currentLayerKey = 'streets';
-
-    // Initialize Leaflet Map
-    const map = L.map('map', {
-      center: MAP_CENTER,
-      zoom: 18,
-      minZoom: 17,
-      maxZoom: 20,
-      zoomControl: false,
-      maxBounds: strictCampusBounds,
-      maxBoundsViscosity: 1.0
-    });
-
-    mapLayers.streets.addTo(map);
-
-    const locationList = document.getElementById('locationList');
-    const searchInput = document.getElementById('searchInput');
-    const clearSearchBtn = document.getElementById('clearSearchBtn');
-    const sidebar = document.getElementById('sidebar');
-    const sidebarBackdrop = document.getElementById('sidebarBackdrop');
-
-    renderSidebarList(locations);
-
-    locations.forEach(loc => {
-      // 1. Create HTML for custom pin
-      const iconHtml = `
-        <div class="marker-pin" style="background: ${loc.color};">
-          <i data-lucide="${loc.icon}" style="width: 16px; height: 16px;"></i>
-        </div>
-        <div class="marker-pointer" style="color: ${loc.color}"></div>
-      `;
-
-      // 2. Define custom Leaflet DivIcon
-      const customIcon = L.divIcon({
-        className: 'custom-marker',
-        html: iconHtml,
-        iconSize: [34, 44],
-        iconAnchor: [17, 44],
-        popupAnchor: [0, -42]
-      });
-
-      // 3. Create Popup HTML with dark mode compatibility
-      const popupHtml = `
-        <div class="bg-white dark:bg-slate-900 transition-colors">
-          <div class="p-3.5 text-white flex items-center gap-2.5" style="background: ${loc.color};">
-             <i data-lucide="${loc.icon}" class="w-5 h-5"></i>
-             <div>
-               <h3 class="font-bold text-xs sm:text-sm leading-tight">${loc.name}</h3>
-               <p class="text-[10px] opacity-90 uppercase tracking-wider font-semibold">${loc.category}</p>
-             </div>
-          </div>
-          <div class="p-3.5 bg-white dark:bg-slate-900">
-            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">${loc.description}</p>
-            <div class="flex flex-wrap gap-1">
-              ${loc.features.map(f => `<span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-medium rounded-md border border-slate-200 dark:border-slate-700">${f}</span>`).join('')}
-            </div>
-          </div>
-        </div>
-      `;
-
-      // 4. Add marker to map
-      const marker = L.marker([loc.lat, loc.lng], { icon: customIcon })
-        .bindPopup(popupHtml)
-        .addTo(map);
+    <!-- Sidebar / Drawer -->
+    <div id="sidebar" class="absolute top-16 left-0 w-96 h-[calc(100vh-4rem)] bg-white shadow-2xl flex flex-col md:transform-none">
         
-      markers[loc.id] = marker;
+        <!-- Mobile Handle -->
+        <div class="md:hidden w-full flex justify-center py-2" onclick="toggleDrawer()">
+            <div class="w-12 h-1.5 bg-gray-300 dark:bg-gray-600 rounded-full"></div>
+        </div>
 
-      marker.on('popupopen', () => {
-        setTimeout(() => lucide.createIcons(), 10);
-      });
-    });
-
-    setTimeout(() => lucide.createIcons(), 100);
-
-    function renderSidebarList(data) {
-      locationList.innerHTML = '';
-      
-      if(data.length === 0) {
-        locationList.innerHTML = `
-          <div class="p-6 text-center text-xs sm:text-sm text-slate-400 dark:text-slate-500 flex flex-col items-center gap-2">
-            <i data-lucide="map-pin-off" class="w-6 h-6"></i>
-            <span>No matching campus places found.</span>
-          </div>`;
-        lucide.createIcons();
-        return;
-      }
-
-      data.forEach(loc => {
-        const item = document.createElement('div');
-        item.className = 'group p-2.5 mb-1.5 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-800/60 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-sm hover:bg-brand-50/50 dark:hover:bg-slate-800 cursor-pointer transition flex items-start gap-2.5';
-        item.onclick = () => focusLocation(loc.id);
-        
-        item.innerHTML = `
-          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-white shadow-sm" style="background: ${loc.color}">
-            <i data-lucide="${loc.icon}" class="w-4 h-4"></i>
-          </div>
-          <div class="flex-1 min-w-0">
-            <h4 class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-brand-600 dark:group-hover:text-brand-400 transition">${loc.name}</h4>
-            <div class="flex items-center gap-2 mt-0.5">
-              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${loc.category}</span>
-              <p class="text-[11px] text-slate-400 dark:text-slate-400 line-clamp-1 truncate">${loc.description}</p>
+        <div class="p-4 border-b dark:border-gray-700">
+            <input type="text" id="searchInput" placeholder="Search buildings, faculties..." 
+                class="w-full p-3 rounded-xl border dark:border-gray-600 bg-gray-50 dark:bg-gray-700 outline-none focus:ring-2 focus:ring-blue-500 transition mb-3"
+                onkeyup="filterLocations()">
+                
+            <!-- Category Chips -->
+            <div class="flex flex-wrap gap-2 overflow-x-auto pb-1" id="categoryChips">
+                <button onclick="setCategory('All')" class="chip active px-3 py-1 rounded-full text-sm font-semibold bg-blue-600 text-white">All</button>
+                <button onclick="setCategory('Academic')" class="chip px-3 py-1 rounded-full text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Academic</button>
+                <button onclick="setCategory('Admin')" class="chip px-3 py-1 rounded-full text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Admin</button>
+                <button onclick="setCategory('Services')" class="chip px-3 py-1 rounded-full text-sm font-semibold bg-gray-200 dark:bg-gray-700 text-gray-700 dark:text-gray-200">Services</button>
             </div>
-          </div>
-        `;
-        locationList.appendChild(item);
-      });
-      
-      lucide.createIcons();
-    }
+        </div>
 
-    function focusLocation(id) {
-      const loc = locations.find(l => l.id === id);
-      if(!loc) return;
+        <!-- Location List / Details Panel -->
+        <div id="sidebarContent" class="flex-1 overflow-y-auto p-4">
+            <div id="locationList" class="space-y-3"></div>
+            <div id="locationDetails" class="hidden h-full flex flex-col">
+                <button onclick="showList()" class="mb-4 text-blue-600 dark:text-blue-400 font-semibold hover:underline">
+                    <i class="fa-solid fa-arrow-left mr-2"></i>Back to list
+                </button>
+                <h2 id="detailTitle" class="text-2xl font-bold mb-2"></h2>
+                <span id="detailCategory" class="text-sm font-bold px-2 py-1 bg-gray-200 dark:bg-gray-700 rounded-md w-max mb-4"></span>
+                <p id="detailDesc" class="text-gray-600 dark:text-gray-300 mb-4"></p>
+                
+                <h3 class="font-bold mb-2 border-b pb-1 dark:border-gray-700">Facilities</h3>
+                <div id="detailFacilities" class="flex flex-wrap gap-2 mb-6"></div>
+                
+                <div class="mt-auto">
+                    <button id="routeBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-3 px-4 rounded-xl transition duration-300 shadow-md">
+                        <i class="fa-solid fa-route mr-2"></i>පාර පෙන්වන්න (Directions)
+                    </button>
+                    <div id="route-info" class="mt-3 text-center text-sm font-bold text-green-600 dark:text-green-400"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-      // If on mobile screen (< 768px), auto close drawer so map is fully visible
-      if (window.innerWidth < 768) {
-        closeSidebar();
-      }
+    <!-- Leaflet JS -->
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <!-- Leaflet Routing Machine JS -->
+    <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
 
-      map.flyTo([loc.lat, loc.lng], 19, {
-        duration: 1.2
-      });
+    <script>
+        // --- 1. Map Initialization (Locked to Campus) ---
+        const map = L.map('map', {
+            zoomControl: false // Custom controls position later
+        }).setView([6.9015, 79.8600], 17);
 
-      setTimeout(() => {
-        markers[id].openPopup();
-        lucide.createIcons();
-      }, 1200);
-    }
+        L.control.zoom({ position: 'topright' }).addTo(map);
 
-    // Filter locations based on Search and Category
-    function filterLocations() {
-      const query = searchInput.value.toLowerCase().trim();
-      clearSearchBtn.classList.toggle('hidden', query.length === 0);
+        // Lock map boundaries to Colombo 07 Campus area
+        const campusBounds = L.latLngBounds(
+            L.latLng(6.896, 79.855), // South West
+            L.latLng(6.906, 79.865)  // North East
+        );
+        map.setMaxBounds(campusBounds);
+        map.on('drag', function() { map.panInsideBounds(campusBounds, { animate: false }); });
 
-      const filtered = locations.filter(loc => {
-        const matchesQuery = loc.name.toLowerCase().includes(query) || 
-                             loc.category.toLowerCase().includes(query) ||
-                             loc.description.toLowerCase().includes(query);
-        const matchesCat = (activeCategory === 'All') || (loc.category === activeCategory);
-        return matchesQuery && matchesCat;
-      });
+        // --- 2. Map Layers ---
+        const streetsLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', {
+            maxZoom: 20, minZoom: 16, subdomains:['mt0','mt1','mt2','mt3']
+        }).addTo(map);
 
-      renderSidebarList(filtered);
-
-      // Toggle marker visibility on map
-      locations.forEach(loc => {
-        const isVisible = (activeCategory === 'All' || loc.category === activeCategory);
-        if (isVisible) {
-          if (!map.hasLayer(markers[loc.id])) markers[loc.id].addTo(map);
-        } else {
-          if (map.hasLayer(markers[loc.id])) map.removeLayer(markers[loc.id]);
-        }
-      });
-    }
-
-    // Search event
-    searchInput.addEventListener('input', filterLocations);
-    clearSearchBtn.addEventListener('click', () => {
-      searchInput.value = '';
-      filterLocations();
-      searchInput.focus();
-    });
-
-    document.querySelectorAll('.cat-pill').forEach(btn => {
-      btn.addEventListener('click', () => {
-        document.querySelectorAll('.cat-pill').forEach(b => {
-          b.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
-          b.classList.add('bg-slate-200/80', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300');
+        const satelliteLayer = L.tileLayer('https://{s}.google.com/vt/lyrs=s,h&x={x}&y={y}&z={z}', {
+            maxZoom: 20, minZoom: 16, subdomains:['mt0','mt1','mt2','mt3']
         });
-        btn.classList.remove('bg-slate-200/80', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300');
-        btn.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
 
-        activeCategory = btn.dataset.category;
-        filterLocations();
-      });
-    });
+        const darkLayer = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+            maxZoom: 20, minZoom: 16
+        });
 
-    function openSidebar() {
-      sidebar.classList.remove('-translate-x-full');
-      sidebarBackdrop.classList.remove('opacity-0', 'pointer-events-none');
-      sidebarBackdrop.classList.add('opacity-100');
-    }
+        let currentLayer = 'streets';
+        function toggleLayers() {
+            map.removeLayer(streetsLayer);
+            map.removeLayer(satelliteLayer);
+            map.removeLayer(darkLayer);
 
-    function closeSidebar() {
-      sidebar.classList.add('-translate-x-full');
-      sidebarBackdrop.classList.remove('opacity-100');
-      sidebarBackdrop.classList.add('opacity-0', 'pointer-events-none');
-    }
+            if (currentLayer === 'streets') {
+                satelliteLayer.addTo(map);
+                currentLayer = 'satellite';
+            } else if (currentLayer === 'satellite') {
+                darkLayer.addTo(map);
+                currentLayer = 'dark';
+            } else {
+                streetsLayer.addTo(map);
+                currentLayer = 'streets';
+            }
+        }
 
-    document.getElementById('openSidebarBtn').addEventListener('click', () => {
-      if (sidebar.classList.contains('-translate-x-full')) {
-        openSidebar();
-      } else {
-        closeSidebar();
-      }
-    });
+        // --- 3. Locations Data ---
+        const locations = [
+            { id: 1, lat: 6.9012, lng: 79.8595, name: "Student Service Centre", category: "Services", desc: "Main student inquiries and administrative services.", facilities: ["Inquiry Desk", "Waiting Area"] },
+            { id: 7, lat: 6.9025, lng: 79.8590, name: "Chemistry Lecture Theatre", category: "Academic", desc: "Main lecture hall for the Department of Chemistry.", facilities: ["Projector", "AC", "Whiteboard"] },
+            { id: 11, lat: 6.9021, lng: 79.8601, name: "Natural History Museum", category: "Academic", desc: "University museum housing biological and zoological specimens.", facilities: ["Exhibits", "Guided Tours"] },
+            { id: 16, lat: 6.9020, lng: 79.8615, name: "Department of Physics", category: "Academic", desc: "Physics laboratories and faculty offices.", facilities: ["Labs", "Workshops"] },
+            { id: 19, lat: 6.9015, lng: 79.8610, name: "New Arts Theatre", category: "Theatres", desc: "Large auditorium for university events and lectures.", facilities: ["Stage", "Sound System", "Seating: 500+"] },
+            { id: 21, lat: 6.9025, lng: 79.8620, name: "UCSC Building", category: "Academic", desc: "University of Colombo School of Computing.", facilities: ["Computer Labs", "Library", "Cafeteria"] },
+            { id: 23, lat: 6.9018, lng: 79.8625, name: "Medical Centre", category: "Services", desc: "University healthcare and emergency services.", facilities: ["First Aid", "Doctor on call", "Pharmacy"] }
+        ];
 
-    document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
-    sidebarBackdrop.addEventListener('click', closeSidebar);
+        let markers = [];
+        let activeCategory = 'All';
 
-    window.switchMapLayer = function(type) {
-      if (currentLayerKey === type) return;
+        // Add markers to map
+        locations.forEach(loc => {
+            const marker = L.marker([loc.lat, loc.lng]).addTo(map);
+            marker.bindPopup(`<b>${loc.name}</b><br><span class="text-xs text-gray-500">${loc.category}</span>`);
+            marker.on('click', () => openDetail(loc));
+            markers.push({ data: loc, marker: marker });
+        });
 
-      map.removeLayer(mapLayers[currentLayerKey]);
-      mapLayers[type].addTo(map);
-      currentLayerKey = type;
+        // --- 4. Sidebar & UI Logic ---
+        const locationListEl = document.getElementById('locationList');
+        
+        function renderList(data) {
+            locationListEl.innerHTML = '';
+            if(data.length === 0) {
+                locationListEl.innerHTML = '<p class="text-gray-500 text-center mt-10">No locations found.</p>';
+                return;
+            }
+            data.forEach(loc => {
+                const item = document.createElement('div');
+                item.className = "p-4 bg-gray-50 dark:bg-gray-800 rounded-xl cursor-pointer hover:bg-blue-50 dark:hover:bg-gray-700 transition border dark:border-gray-700 shadow-sm";
+                item.innerHTML = `
+                    <h3 class="font-bold text-lg">${loc.name}</h3>
+                    <span class="text-xs font-semibold text-blue-600 dark:text-blue-400 bg-blue-100 dark:bg-blue-900/30 px-2 py-1 rounded">${loc.category}</span>
+                `;
+                item.onclick = () => {
+                    map.flyTo([loc.lat, loc.lng], 19, { animate: true, duration: 1.5 });
+                    openDetail(loc);
+                };
+                locationListEl.appendChild(item);
+            });
+        }
 
-      // Update Desktop pill buttons
-      document.querySelectorAll('.layer-btn').forEach(btn => {
-        btn.classList.remove('bg-brand-600', 'text-white');
-        btn.classList.add('text-slate-600', 'dark:text-slate-300');
-      });
-      const activeBtn = document.getElementById('layer' + type.charAt(0).toUpperCase() + type.slice(1) + 'Btn');
-      if (activeBtn) {
-        activeBtn.classList.remove('text-slate-600', 'dark:text-slate-300');
-        activeBtn.classList.add('bg-brand-600', 'text-white');
-      }
+        function filterLocations() {
+            const term = document.getElementById('searchInput').value.toLowerCase();
+            const filtered = locations.filter(loc => 
+                (activeCategory === 'All' || loc.category === activeCategory) &&
+                (loc.name.toLowerCase().includes(term) || loc.category.toLowerCase().includes(term))
+            );
+            renderList(filtered);
+        }
 
-      showToast(`Switched to ${type.charAt(0).toUpperCase() + type.slice(1)} View`);
-    };
+        function setCategory(cat) {
+            activeCategory = cat;
+            document.querySelectorAll('.chip').forEach(c => {
+                c.classList.remove('bg-blue-600', 'text-white');
+                c.classList.add('bg-gray-200', 'text-gray-700', 'dark:bg-gray-700', 'dark:text-gray-200');
+            });
+            event.target.classList.remove('bg-gray-200', 'text-gray-700', 'dark:bg-gray-700', 'dark:text-gray-200');
+            event.target.classList.add('bg-blue-600', 'text-white');
+            filterLocations();
+        }
 
-    // Mobile Layer Cycle Button
-    document.getElementById('mobileLayerToggleBtn').addEventListener('click', () => {
-      const modes = ['streets', 'satellite', 'dark'];
-      const nextMode = modes[(modes.indexOf(currentLayerKey) + 1) % modes.length];
-      switchMapLayer(nextMode);
-    });
+        // --- 5. Detail View & Drawer ---
+        function openDetail(loc) {
+            document.getElementById('locationList').classList.add('hidden');
+            document.getElementById('locationDetails').classList.remove('hidden');
+            
+            document.getElementById('detailTitle').innerText = loc.name;
+            document.getElementById('detailCategory').innerText = loc.category;
+            document.getElementById('detailDesc').innerText = loc.desc;
+            
+            const facHtml = loc.facilities.map(f => `<span class="px-2 py-1 bg-blue-100 text-blue-700 dark:bg-blue-900 dark:text-blue-300 rounded-full text-xs font-semibold">${f}</span>`).join('');
+            document.getElementById('detailFacilities').innerHTML = facHtml;
 
-    const themeToggleBtn = document.getElementById('themeToggleBtn');
-    const themeIcon = document.getElementById('themeIcon');
+            // Setup Routing Button
+            const routeBtn = document.getElementById('routeBtn');
+            routeBtn.onclick = () => showRoute(loc.lat, loc.lng);
+            document.getElementById('route-info').innerText = '';
 
-    themeToggleBtn.addEventListener('click', () => {
-      isDarkMode = !isDarkMode;
-      document.documentElement.classList.toggle('dark', isDarkMode);
+            // Open mobile drawer automatically
+            document.getElementById('sidebar').classList.add('open');
+        }
 
-      if (isDarkMode) {
-        themeIcon.setAttribute('data-lucide', 'sun');
-        if (currentLayerKey === 'streets') switchMapLayer('dark');
-        showToast("Dark Mode Enabled");
-      } else {
-        themeIcon.setAttribute('data-lucide', 'moon');
-        if (currentLayerKey === 'dark') switchMapLayer('streets');
-        showToast("Light Mode Enabled");
-      }
-      lucide.createIcons();
-    });
+        function showList() {
+            document.getElementById('locationDetails').classList.add('hidden');
+            document.getElementById('locationList').classList.remove('hidden');
+            if(routingControl) { map.removeControl(routingControl); }
+        }
 
-    document.getElementById('locateMeBtn').addEventListener('click', () => {
-      showToast("Searching your location...");
-      if (!navigator.geolocation) {
-        showToast("Geolocation not supported by your browser");
-        return;
-      }
+        function toggleDrawer() {
+            document.getElementById('sidebar').classList.toggle('open');
+        }
 
-      navigator.geolocation.getCurrentPosition(
-        (pos) => {
-          const userLat = pos.coords.latitude;
-          const userLng = pos.coords.longitude;
+        // --- 6. Routing (Directions) ---
+        let routingControl = null;
+        let userLat = 6.9000; // Default: Reid Ave Entrance
+        let userLng = 79.8588;
 
-          if (userLocationMarker) map.removeLayer(userLocationMarker);
+        // Try to get actual GPS if available
+        map.locate({setView: false, maxZoom: 16});
+        map.on('locationfound', function(e) {
+            userLat = e.latlng.lat; userLng = e.latlng.lng;
+        });
 
-          const gpsIcon = L.divIcon({
-            className: 'user-gps-marker',
-            html: `<div class="user-gps-pulse"></div>`,
-            iconSize: [20, 20],
-            iconAnchor: [10, 10]
-          });
+        window.showRoute = function(destLat, destLng) {
+            if (routingControl) { map.removeControl(routingControl); }
+            document.getElementById('route-info').innerText = "පාර හොයමින් පවතී... ⏳";
 
-          userLocationMarker = L.marker([userLat, userLng], { icon: gpsIcon })
-            .bindPopup("<div class='p-2 text-xs font-semibold'>You are here!</div>")
-            .addTo(map);
+            routingControl = L.Routing.control({
+                waypoints: [ L.latLng(userLat, userLng), L.latLng(destLat, destLng) ],
+                router: L.Routing.osrmv1({ language: 'en', profile: 'foot' }), // Walking route
+                lineOptions: { styles: [{color: '#3b82f6', opacity: 0.8, weight: 6}] },
+                show: false, addWaypoints: false,
+                createMarker: function() { return null; }
+            }).on('routesfound', function(e) {
+                let summary = e.routes[0].summary;
+                let dist = summary.totalDistance < 1000 ? Math.round(summary.totalDistance) + ' m' : (summary.totalDistance / 1000).toFixed(1) + ' km';
+                let time = Math.round(summary.totalTime / 60) + ' min';
+                document.getElementById('route-info').innerHTML = `🚶 දුර: ${dist} | ⏱️ වෙලාව: ${time}`;
+            }).addTo(map);
 
-          // Fly to user
-          map.flyTo([userLat, userLng], 18.5, { duration: 1.5 });
-          showToast("Location found!");
-        },
-        () => {
-          showToast("Unable to fetch location. Please check GPS permissions.");
-        },
-        { enableHighAccuracy: true, timeout: 8000 }
-      );
-    });
+            if(window.innerWidth < 768) { toggleDrawer(); }
+        };
 
-    function showToast(text) {
-      const toast = document.getElementById('toastBox');
-      const toastMsg = document.getElementById('toastMessage');
-      toastMsg.innerText = text;
-      toast.classList.remove('opacity-0', 'translate-y-[-10px]');
-      toast.classList.add('opacity-100', 'translate-y-0');
+        // --- 7. Dark Mode Logic ---
+        function toggleDarkMode() {
+            document.documentElement.classList.toggle('dark');
+            const icon = document.getElementById('theme-icon');
+            if(document.documentElement.classList.contains('dark')) {
+                icon.classList.replace('fa-moon', 'fa-sun');
+                if(currentLayer === 'streets') { toggleLayers(); toggleLayers(); } // Switch to dark map
+            } else {
+                icon.classList.replace('fa-sun', 'fa-moon');
+                if(currentLayer === 'dark') { toggleLayers(); } // Switch to street map
+            }
+        }
 
-      clearTimeout(window.toastTimer);
-      window.toastTimer = setTimeout(() => {
-        toast.classList.remove('opacity-100', 'translate-y-0');
-        toast.classList.add('opacity-0', 'translate-y-[-10px]');
-      }, 2500);
-    }
-
-    // Zoom & Reset Controls
-    document.getElementById('zoomInBtn').addEventListener('click', () => map.zoomIn());
-    document.getElementById('zoomOutBtn').addEventListener('click', () => map.zoomOut());
-    
-    document.getElementById('resetMapBtn').addEventListener('click', () => {
-      map.closePopup();
-      map.flyTo(MAP_CENTER, 18, { duration: 1.2 });
-      showToast("Campus view reset");
-    });
-
-  </script>
+        // Initialize List
+        renderList(locations);
+    </script>
 </body>
 </html>
