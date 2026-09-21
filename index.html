@@ -273,7 +273,7 @@
   <script>
     lucide.createIcons();
 
-    // All 23 Locations with exact colors and icons as requested
+    // All 23 Locations
     const locations = [
       { id: '1', name: 'Student Service Centre (Upcoming)', category: 'Services', lat: 6.8990, lng: 79.8591, icon: 'users', color: '#eab308', description: 'Upcoming Student Service Centre (Building 1)', features: ['Student Services', 'Help Desk'] },
       { id: '2', name: 'Department of Nuclear Science', category: 'Academic', lat: 6.8994, lng: 79.8587, icon: 'atom', color: '#d97706', description: 'Department of Nuclear Science (Building 2)', features: ['Laboratories', 'Research'] },
@@ -306,8 +306,9 @@
     let isDarkMode = false;
     let userLocationMarker = null;
     
-    let userLat = 6.9007; 
-    let userLng = 79.8601;
+    // Default start location (Main Gate / Entrance area, will auto-update if GPS is found)
+    let userLat = 6.8990; 
+    let userLng = 79.8591;
 
     const strictCampusBounds = L.latLngBounds([6.8980, 79.8575], [6.9030, 79.8630]);
 
@@ -324,6 +325,22 @@
     });
 
     mapLayers.streets.addTo(map);
+
+    // Auto-fetch user live GPS location on startup
+    if (navigator.geolocation) {
+      navigator.geolocation.watchPosition(pos => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        if (userLocationMarker) map.removeLayer(userLocationMarker);
+        userLocationMarker = L.marker([userLat, userLng], { 
+          icon: L.divIcon({ className: 'user-gps-marker', html: `<div class="user-gps-pulse"></div>`, iconSize: [20, 20] }) 
+        }).addTo(map);
+      }, err => {
+        // Fallback to Main Gate if GPS fails
+        userLat = 6.8990;
+        userLng = 79.8591;
+      }, { enableHighAccuracy: true });
+    }
 
     locations.forEach(loc => {
       const iconHtml = `<div class="marker-pin" style="background: ${loc.color};"><i data-lucide="${loc.icon}" style="width: 16px; height: 16px;"></i></div><div class="marker-pointer" style="color: ${loc.color}"></div>`;
