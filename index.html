@@ -2,791 +2,91 @@
 <html lang="en">
 <head>
   <meta charset="UTF-8">
-  <!-- FIXED: Correct viewport meta tag without user-scalable=no restriction -->
-  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
   <title>University of Colombo - Faculty of Science Map</title>
-
+  
+  <!-- Tailwind CSS -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  
   <!-- Google Fonts: Inter -->
   <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
-
-  <!-- Leaflet CSS -->
+  
+  <!-- Leaflet CSS & JS -->
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
-  <!-- Leaflet Routing Machine CSS -->
-  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.css" />
-
+  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+  
+  <!-- Leaflet Routing Machine CSS & JS -->
+  <link rel="stylesheet" href="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.css" />
+  
   <!-- Lucide Icons -->
   <script src="https://unpkg.com/lucide@latest"></script>
 
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          fontFamily: { sans: ['Inter', 'sans-serif'] },
+          colors: {
+            brand: {
+              50: '#f0f9ff',
+              100: '#e0f2fe',
+              500: '#0ea5e9',
+              600: '#0284c7',
+              700: '#0369a1',
+              900: '#0c4a6e'
+            }
+          }
+        }
+      }
+    }
+  </script>
+
   <style>
-    /* ============================
-       CSS RESET & BASE
-    ============================ */
-    *, *::before, *::after {
-      box-sizing: border-box;
-    }
-
-    :root {
-      --brand-50:  #f0f9ff;
-      --brand-100: #e0f2fe;
-      --brand-400: #38bdf8;
-      --brand-500: #0ea5e9;
-      --brand-600: #0284c7;
-      --brand-700: #0369a1;
-      --brand-800: #075985;
-      --brand-900: #0c4a6e;
-
-      --bg:         #f8fafc;
-      --bg-card:    #ffffff;
-      --bg-sidebar: #ffffff;
-      --bg-header:  linear-gradient(135deg, #0c4a6e, #0369a1, #0284c7);
-      --bg-input:   #ffffff;
-      --text-main:  #1e293b;
-      --text-sub:   #64748b;
-      --text-muted: #94a3b8;
-      --border:     #e2e8f0;
-      --border-item:#e2e8f0;
-      --shadow:     0 1px 3px rgba(0,0,0,.08), 0 4px 12px rgba(0,0,0,.05);
-      --shadow-lg:  0 4px 24px rgba(0,0,0,.12), 0 1px 4px rgba(0,0,0,.06);
-      --pill-bg:    #f1f5f9;
-      --pill-text:  #475569;
-      --pill-hover: #e2e8f0;
-      --item-hover-bg: #f0f9ff;
-      --item-hover-border: #bae6fd;
-      --scrollbar:  #cbd5e1;
-      --map-bg:     #e2e8f0;
-      --route-box-bg: rgba(255,255,255,0.96);
-      --footer-bg:  #f8fafc;
-    }
-
-    html.dark {
-      --bg:         #0b1120;
-      --bg-card:    #111827;
-      --bg-sidebar: #0f172a;
-      --bg-header:  linear-gradient(135deg, #0c1f35, #0c2d4a, #0c3d63);
-      --bg-input:   #1e293b;
-      --text-main:  #f1f5f9;
-      --text-sub:   #94a3b8;
-      --text-muted: #64748b;
-      --border:     #1e293b;
-      --border-item:#1e293b;
-      --pill-bg:    #1e293b;
-      --pill-text:  #94a3b8;
-      --pill-hover: #293548;
-      --item-hover-bg: #0c2340;
-      --item-hover-border: #1e4a7a;
-      --scrollbar:  #334155;
-      --map-bg:     #0b1120;
-      --route-box-bg: rgba(15,23,42,0.96);
-      --footer-bg:  #0f172a;
-    }
-
-    /* ============================
-       LAYOUT: CHROME FIX
-    ============================ */
-    html {
-      height: 100%;
-      height: -webkit-fill-available; /* iOS/Chrome fix */
-      overflow: hidden;
-    }
-
-    body {
+    /* Fix mobile viewport height issues */
+    html, body {
       margin: 0;
       padding: 0;
-      font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
-      background: var(--bg);
-      color: var(--text-main);
-      /* FIXED: Use dvh for dynamic viewport height (Chrome/mobile fix) */
+      width: 100vw;
       height: 100dvh;
-      height: 100vh;
-      height: -webkit-fill-available;
-      width: 100%;
       overflow: hidden;
-      display: flex;
-      flex-direction: row;
-      -webkit-font-smoothing: antialiased;
-      -moz-osx-font-smoothing: grayscale;
-      /* FIXED: Prevent iOS overscroll bounce */
       position: fixed;
-      left: 0;
-      top: 0;
     }
-
-    /* ============================
-       MAP
-    ============================ */
     #map {
-      position: absolute;
-      inset: 0;
-      z-index: 1;
-      background: var(--map-bg);
-      /* FIXED: Force GPU compositing for smoother rendering in Chrome */
-      transform: translateZ(0);
-      -webkit-transform: translateZ(0);
-      will-change: transform;
-    }
-
-    main {
-      flex: 1;
-      position: relative;
-      height: 100%;
-      overflow: hidden;
-      /* FIXED: Ensure the map container fills properly on Chrome mobile */
-      min-height: 0;
-    }
-
-    .leaflet-container {
-      background: var(--map-bg) !important;
-      font-family: 'Inter', sans-serif !important;
-    }
-
-    /* ============================
-       SIDEBAR
-    ============================ */
-    #sidebar {
-      position: fixed;
-      z-index: 40;
-      background: var(--bg-sidebar);
-      display: flex;
-      flex-direction: column;
-      flex-shrink: 0;
-      border-right: 1px solid var(--border);
-      /* FIXED: Use transform3d for smooth GPU-accelerated animation */
-      transition: transform 0.32s cubic-bezier(0.4,0,0.2,1);
-      will-change: transform;
-      overflow: hidden;
-    }
-
-    /* Desktop: left sidebar */
-    @media (min-width: 768px) {
-      #sidebar {
-        position: relative;
-        width: 360px;
-        height: 100%;
-        transform: translateX(0) !important;
-        box-shadow: none;
-      }
-      #sidebar.sidebar-closed {
-        transform: translateX(-100%) !important;
-      }
-    }
-
-    /* Mobile: bottom sheet */
-    @media (max-width: 767px) {
-      #sidebar {
-        bottom: 0;
-        left: 0;
-        right: 0;
-        width: 100%;
-        /* FIXED: Use safe area insets for notched phones */
-        height: calc(80svh - env(safe-area-inset-bottom, 0px));
-        max-height: calc(80svh - env(safe-area-inset-bottom, 0px));
-        border-radius: 20px 20px 0 0;
-        box-shadow: 0 -4px 32px rgba(0,0,0,0.18);
-        border-right: none;
-        border-top: 1px solid var(--border);
-        transform: translateY(100%);
-        padding-bottom: env(safe-area-inset-bottom, 0px);
-      }
-      #sidebar.sidebar-open {
-        transform: translateY(0);
-      }
-    }
-
-    /* ============================
-       SIDEBAR HEADER
-    ============================ */
-    .sidebar-header {
-      padding: 16px 18px;
-      background: var(--bg-header);
-      color: white;
-      flex-shrink: 0;
-    }
-
-    .sidebar-header-top {
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      gap: 12px;
-    }
-
-    .sidebar-logo {
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-
-    .sidebar-logo-icon {
-      width: 38px;
-      height: 38px;
-      border-radius: 10px;
-      background: rgba(255,255,255,0.18);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-    }
-
-    .sidebar-title {
-      font-size: 16px;
-      font-weight: 700;
-      letter-spacing: -0.3px;
-      line-height: 1.2;
-    }
-
-    .sidebar-subtitle {
-      font-size: 11px;
-      color: rgba(255,255,255,0.75);
-      font-weight: 500;
-      margin-top: 1px;
-    }
-
-    .sidebar-header-actions {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-    }
-
-    .icon-btn {
-      width: 32px;
-      height: 32px;
-      border-radius: 8px;
-      background: rgba(255,255,255,0.15);
-      border: none;
-      color: white;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      transition: background 0.15s;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .icon-btn:hover { background: rgba(255,255,255,0.28); }
-    .icon-btn:active { transform: scale(0.93); }
-
-    /* Mobile drag handle */
-    .drag-handle {
-      display: none;
-      width: 40px;
-      height: 4px;
-      border-radius: 2px;
-      background: rgba(0,0,0,0.12);
-      margin: 10px auto 0;
-      flex-shrink: 0;
-    }
-    html.dark .drag-handle { background: rgba(255,255,255,0.12); }
-
-    @media (max-width: 767px) {
-      .drag-handle { display: block; }
-      .sidebar-header { padding: 14px 16px 14px; }
-      .sidebar-title { font-size: 15px; }
-    }
-
-    /* ============================
-       SEARCH & FILTERS
-    ============================ */
-    .sidebar-search {
-      padding: 12px 14px;
-      border-bottom: 1px solid var(--border);
-      background: var(--bg-sidebar);
-      flex-shrink: 0;
-    }
-
-    .search-wrap {
-      position: relative;
-      margin-bottom: 10px;
-    }
-
-    .search-icon {
-      position: absolute;
-      left: 10px;
-      top: 50%;
-      transform: translateY(-50%);
-      color: var(--text-muted);
-      pointer-events: none;
-    }
-
-    .search-input {
       width: 100%;
-      padding: 9px 34px 9px 32px;
-      background: var(--bg-input);
-      border: 1.5px solid var(--border);
-      border-radius: 10px;
-      color: var(--text-main);
-      font-size: 13px;
-      font-family: inherit;
-      outline: none;
-      transition: border-color 0.15s, box-shadow 0.15s;
-    }
-    .search-input::placeholder { color: var(--text-muted); }
-    .search-input:focus {
-      border-color: var(--brand-500);
-      box-shadow: 0 0 0 3px rgba(14,165,233,0.12);
-    }
-
-    .clear-btn {
+      height: 100%;
       position: absolute;
-      right: 8px;
-      top: 50%;
-      transform: translateY(-50%);
-      background: none;
-      border: none;
-      color: var(--text-muted);
-      cursor: pointer;
-      padding: 2px;
-      display: none;
-      -webkit-tap-highlight-color: transparent;
+      top: 0;
+      left: 0;
+      z-index: 10;
+      background-color: #f8fafc;
     }
-    .clear-btn:hover { color: var(--text-sub); }
-    .clear-btn.visible { display: flex; }
-
-    /* Category pills */
-    .cat-pills {
-      display: flex;
-      gap: 6px;
-      overflow-x: auto;
-      padding-bottom: 2px;
-      /* FIXED: Smooth momentum scrolling on iOS */
-      -webkit-overflow-scrolling: touch;
-      scrollbar-width: none;
-    }
-    .cat-pills::-webkit-scrollbar { display: none; }
-
-    .cat-pill {
-      padding: 5px 11px;
-      border-radius: 20px;
-      font-size: 11px;
-      font-weight: 600;
-      white-space: nowrap;
-      cursor: pointer;
-      border: none;
-      background: var(--pill-bg);
-      color: var(--pill-text);
-      font-family: inherit;
-      transition: background 0.13s, color 0.13s, transform 0.1s;
-      flex-shrink: 0;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .cat-pill:hover { background: var(--pill-hover); }
-    .cat-pill:active { transform: scale(0.95); }
-    .cat-pill.active {
-      background: var(--brand-600);
-      color: white;
-      box-shadow: 0 2px 8px rgba(2,132,199,0.30);
+    
+    .dark body { background-color: #0f172a; }
+    .dark #map { background-color: #0b0f19 !important; }
+    .leaflet-container { background: #f8fafc !important; font-family: 'Inter', sans-serif; }
+    .dark .leaflet-container { background: #0b0f19 !important; }
+    
+    /* Mobile responsive drawer */
+    @media (max-width: 768px) {
+      #sidebar {
+        position: fixed !important;
+        bottom: 0 !important;
+        left: 0 !important;
+        right: 0 !important;
+        width: 100% !important;
+        height: 75dvh !important;
+        max-height: 75dvh !important;
+        border-radius: 24px 24px 0 0 !important;
+        transform: translateY(100%);
+        transition: transform 0.3s ease-in-out;
+      }
+      #sidebar.mobile-open {
+        transform: translateY(0) !important;
+      }
     }
 
-    /* ============================
-       LOCATION LIST
-    ============================ */
-    .location-list {
-      flex: 1;
-      overflow-y: auto;
-      padding: 10px 10px;
-      /* FIXED: Smooth momentum scrolling on iOS */
-      -webkit-overflow-scrolling: touch;
-      overscroll-behavior: contain;
-    }
-
-    /* Custom scrollbar */
-    .location-list::-webkit-scrollbar { width: 4px; }
-    .location-list::-webkit-scrollbar-track { background: transparent; }
-    .location-list::-webkit-scrollbar-thumb {
-      background: var(--scrollbar);
-      border-radius: 4px;
-    }
-
-    .location-item {
-      display: flex;
-      align-items: flex-start;
-      gap: 10px;
-      padding: 10px 10px;
-      border-radius: 12px;
-      border: 1.5px solid transparent;
-      background: var(--bg-card);
-      margin-bottom: 6px;
-      cursor: pointer;
-      transition: background 0.15s, border-color 0.15s, transform 0.12s;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .location-item:hover {
-      background: var(--item-hover-bg);
-      border-color: var(--item-hover-border);
-    }
-    .location-item:active {
-      transform: scale(0.98);
-    }
-
-    .location-icon {
-      width: 36px;
-      height: 36px;
-      border-radius: 9px;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      color: white;
-    }
-
-    .location-info { flex: 1; min-width: 0; }
-
-    .location-name {
-      font-size: 12.5px;
-      font-weight: 600;
-      color: var(--text-main);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-      line-height: 1.3;
-    }
-
-    .location-meta {
-      display: flex;
-      align-items: center;
-      gap: 6px;
-      margin-top: 3px;
-    }
-
-    .location-badge {
-      font-size: 10px;
-      font-weight: 600;
-      padding: 2px 7px;
-      border-radius: 6px;
-      background: var(--pill-bg);
-      color: var(--pill-text);
-      flex-shrink: 0;
-    }
-
-    .location-desc {
-      font-size: 11px;
-      color: var(--text-muted);
-      white-space: nowrap;
-      overflow: hidden;
-      text-overflow: ellipsis;
-    }
-
-    .location-empty {
-      padding: 40px 20px;
-      text-align: center;
-      color: var(--text-muted);
-      font-size: 13px;
-    }
-
-    /* ============================
-       SIDEBAR FOOTER
-    ============================ */
-    .sidebar-footer {
-      padding: 10px 14px;
-      border-top: 1px solid var(--border);
-      background: var(--footer-bg);
-      display: flex;
-      align-items: center;
-      justify-content: space-between;
-      font-size: 11px;
-      color: var(--text-muted);
-      flex-shrink: 0;
-    }
-
-    .live-indicator {
-      display: inline-flex;
-      align-items: center;
-      gap: 5px;
-    }
-
-    .live-dot {
-      width: 7px;
-      height: 7px;
-      border-radius: 50%;
-      background: #22c55e;
-      animation: pulse-dot 2s infinite;
-    }
-
-    @keyframes pulse-dot {
-      0%, 100% { opacity: 1; }
-      50% { opacity: 0.4; }
-    }
-
-    /* ============================
-       BACKDROP
-    ============================ */
-    #sidebarBackdrop {
-      position: fixed;
-      inset: 0;
-      background: rgba(0,0,0,0.48);
-      backdrop-filter: blur(2px);
-      -webkit-backdrop-filter: blur(2px);
-      z-index: 35;
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.28s ease;
-    }
-    #sidebarBackdrop.visible {
-      opacity: 1;
-      pointer-events: auto;
-    }
-    @media (min-width: 768px) {
-      #sidebarBackdrop { display: none; }
-    }
-
-    /* ============================
-       FLOATING MAP CONTROLS
-    ============================ */
-    .map-controls-top {
-      position: absolute;
-      top: 12px;
-      left: 12px;
-      z-index: 20;
-      display: flex;
-      align-items: center;
-      gap: 8px;
-    }
-
-    .map-controls-bottom {
-      position: absolute;
-      z-index: 20;
-      display: flex;
-      flex-direction: column;
-      align-items: flex-end;
-      gap: 8px;
-      /* FIXED: Safe area bottom padding for notched phones */
-      bottom: max(16px, calc(16px + env(safe-area-inset-bottom, 0px)));
-      right: 12px;
-    }
-
-    .map-btn {
-      background: var(--bg-card);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      padding: 9px 13px;
-      cursor: pointer;
-      font-family: inherit;
-      font-size: 13px;
-      font-weight: 600;
-      color: var(--text-main);
-      transition: background 0.13s, transform 0.1s;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .map-btn:hover { background: var(--item-hover-bg); }
-    .map-btn:active { transform: scale(0.94); }
-
-    .map-btn-icon {
-      width: 40px;
-      height: 40px;
-      background: var(--bg-card);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: var(--text-main);
-      transition: background 0.13s, transform 0.1s;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .map-btn-icon:hover { background: var(--item-hover-bg); }
-    .map-btn-icon:active { transform: scale(0.93); }
-
-    /* Layer switcher (desktop) */
-    .layer-switcher {
-      display: none;
-      background: var(--bg-card);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-      padding: 4px;
-      gap: 2px;
-    }
-    @media (min-width: 640px) {
-      .layer-switcher { display: flex; }
-    }
-
-    .layer-btn {
-      padding: 6px 10px;
-      border-radius: 9px;
-      font-size: 11.5px;
-      font-weight: 600;
-      cursor: pointer;
-      border: none;
-      background: transparent;
-      color: var(--text-sub);
-      font-family: inherit;
-      transition: background 0.13s, color 0.13s;
-      white-space: nowrap;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .layer-btn:hover { background: var(--pill-hover); }
-    .layer-btn.active {
-      background: var(--brand-600);
-      color: white;
-    }
-
-    /* Zoom buttons */
-    .zoom-btns {
-      background: var(--bg-card);
-      border: 1.5px solid var(--border);
-      border-radius: 12px;
-      box-shadow: var(--shadow-lg);
-      overflow: hidden;
-      display: flex;
-      flex-direction: column;
-    }
-
-    .zoom-btn {
-      width: 40px;
-      height: 40px;
-      background: none;
-      border: none;
-      color: var(--text-main);
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      font-family: inherit;
-      transition: background 0.13s;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .zoom-btn:hover { background: var(--pill-hover); }
-    .zoom-btn:active { background: var(--pill-hover); }
-    .zoom-btn:first-child { border-bottom: 1px solid var(--border); }
-
-    /* Reset / accent button */
-    .map-btn-accent {
-      width: 40px;
-      height: 40px;
-      background: var(--brand-600);
-      border: none;
-      border-radius: 12px;
-      box-shadow: 0 4px 14px rgba(2,132,199,0.35);
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      cursor: pointer;
-      color: white;
-      transition: background 0.13s, transform 0.1s;
-      -webkit-tap-highlight-color: transparent;
-      touch-action: manipulation;
-    }
-    .map-btn-accent:hover { background: var(--brand-700); }
-    .map-btn-accent:active { transform: scale(0.93); }
-
-    /* ============================
-       ROUTE INFO BOX
-    ============================ */
-    #floating-route-info {
-      position: absolute;
-      bottom: max(80px, calc(80px + env(safe-area-inset-bottom, 0px)));
-      left: 50%;
-      transform: translateX(-50%) translateY(16px);
-      z-index: 50;
-      background: var(--route-box-bg);
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
-      border: 1.5px solid rgba(14,165,233,0.25);
-      border-radius: 18px;
-      padding: 12px 18px;
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      box-shadow: 0 8px 32px rgba(0,0,0,0.18);
-      opacity: 0;
-      pointer-events: none;
-      transition: opacity 0.25s ease, transform 0.25s ease;
-      white-space: nowrap;
-    }
-    #floating-route-info.visible {
-      opacity: 1;
-      pointer-events: auto;
-      transform: translateX(-50%) translateY(0);
-    }
-
-    .route-label {
-      font-size: 9.5px;
-      font-weight: 700;
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-      color: var(--text-muted);
-      margin-bottom: 3px;
-    }
-
-    #route-text {
-      font-size: 13px;
-      font-weight: 700;
-      color: var(--brand-700);
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    html.dark #route-text { color: var(--brand-400); }
-
-    .route-divider {
-      width: 1px;
-      height: 30px;
-      background: var(--border);
-      flex-shrink: 0;
-    }
-
-    .clear-route-btn {
-      width: 34px;
-      height: 34px;
-      background: #fef2f2;
-      border: none;
-      border-radius: 10px;
-      color: #ef4444;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      flex-shrink: 0;
-      transition: background 0.13s, transform 0.1s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .clear-route-btn:hover { background: #fee2e2; }
-    .clear-route-btn:active { transform: scale(0.93); }
-    html.dark .clear-route-btn {
-      background: rgba(239,68,68,0.12);
-      color: #f87171;
-    }
-
-    /* ============================
-       TOAST
-    ============================ */
-    #toastBox {
-      position: fixed;
-      /* FIXED: Use safe-area-inset for proper positioning on notched phones */
-      top: max(14px, calc(14px + env(safe-area-inset-top, 0px)));
-      right: 14px;
-      z-index: 100;
-      background: rgba(15,23,42,0.92);
-      color: white;
-      padding: 9px 14px;
-      border-radius: 12px;
-      font-size: 12.5px;
-      font-weight: 500;
-      display: flex;
-      align-items: center;
-      gap: 7px;
-      box-shadow: 0 4px 20px rgba(0,0,0,0.18);
-      opacity: 0;
-      transform: translateY(-8px);
-      pointer-events: none;
-      transition: opacity 0.22s ease, transform 0.22s ease;
-      max-width: calc(100vw - 28px);
-    }
-    html.dark #toastBox { background: rgba(248,250,252,0.96); color: #1e293b; }
-    #toastBox.visible { opacity: 1; transform: translateY(0); }
-
-    /* ============================
-       LEAFLET MARKER STYLES
-    ============================ */
+    /* Custom Marker Styling */
     .custom-marker {
       display: flex;
       flex-direction: column;
@@ -795,19 +95,24 @@
       cursor: pointer;
       transition: transform 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
     }
-    .custom-marker:hover { transform: scale(1.15) translateY(-3px); }
-
+    .custom-marker:hover {
+      transform: scale(1.2) translateY(-4px);
+      z-index: 50 !important;
+    }
+    
     .marker-pin {
-      width: 32px;
-      height: 32px;
+      width: 34px;
+      height: 34px;
       border: 2.5px solid white;
       border-radius: 50%;
-      box-shadow: 0 3px 10px rgba(0,0,0,0.30);
+      box-shadow: 0 4px 10px rgba(0, 0, 0, 0.35);
       display: flex;
       align-items: center;
       justify-content: center;
       color: white;
+      transition: all 0.2s ease;
     }
+    
     .marker-pointer {
       width: 0;
       height: 0;
@@ -817,35 +122,34 @@
       margin-top: -2px;
     }
 
-    /* GPS pulse */
+    /* Pulse animation for User GPS location */
     .user-gps-pulse {
-      width: 18px;
-      height: 18px;
-      background: var(--brand-600);
+      width: 20px;
+      height: 20px;
+      background: #0284c7;
       border: 3px solid white;
       border-radius: 50%;
-      box-shadow: 0 0 0 rgba(2,132,199,0.6);
+      box-shadow: 0 0 0 rgba(2, 132, 199, 0.6);
       animation: pulseGps 2s infinite;
     }
     @keyframes pulseGps {
-      0%   { box-shadow: 0 0 0 0 rgba(2,132,199,0.7); }
-      70%  { box-shadow: 0 0 0 14px rgba(2,132,199,0); }
-      100% { box-shadow: 0 0 0 0 rgba(2,132,199,0); }
+      0% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0.7); }
+      70% { box-shadow: 0 0 0 16px rgba(2, 132, 199, 0); }
+      100% { box-shadow: 0 0 0 0 rgba(2, 132, 199, 0); }
     }
 
-    /* ============================
-       LEAFLET POPUP OVERRIDES
-    ============================ */
+    /* Leaflet Popup overrides */
     .leaflet-popup-content-wrapper {
       border-radius: 14px;
       padding: 0;
-      box-shadow: 0 10px 30px rgba(0,0,0,0.18);
+      box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.25);
       border: none;
       overflow: hidden;
     }
-    html.dark .leaflet-popup-content-wrapper {
+    .dark .leaflet-popup-content-wrapper {
       background-color: #1e293b;
-      color: #f1f5f9;
+      color: #f8fafc;
+      box-shadow: 0 12px 30px -4px rgba(0, 0, 0, 0.6);
     }
     .leaflet-popup-content {
       margin: 0 !important;
@@ -855,635 +159,451 @@
       color: white !important;
       font-size: 18px !important;
       padding: 4px 8px !important;
-      background: rgba(0,0,0,0.22) !important;
+      border-radius: 0 12px 0 12px;
+      background: rgba(0,0,0,0.25) !important;
     }
-    .leaflet-popup-close-button:hover { background: rgba(0,0,0,0.4) !important; }
+    .leaflet-popup-close-button:hover { background: rgba(0,0,0,0.45) !important; }
     .leaflet-popup-tip { display: none; }
     .leaflet-routing-container { display: none !important; }
 
-    /* Popup inner styles */
-    .popup-header {
-      padding: 12px 14px;
-      color: white;
-      display: flex;
-      align-items: center;
-      gap: 10px;
-    }
-    .popup-header h3 {
-      margin: 0;
-      font-size: 13px;
-      font-weight: 700;
-      line-height: 1.3;
-    }
-    .popup-header p {
-      margin: 0;
-      font-size: 10px;
-      opacity: 0.85;
-      text-transform: uppercase;
-      letter-spacing: 0.06em;
-      font-weight: 600;
-    }
-    .popup-body {
-      padding: 12px 14px;
-      background: var(--bg-card);
-      border-bottom: 1px solid var(--border);
-    }
-    .popup-body p {
-      margin: 0 0 10px;
-      font-size: 11.5px;
-      color: var(--text-sub);
-      line-height: 1.55;
-    }
-    .popup-tags { display: flex; flex-wrap: wrap; gap: 5px; }
-    .popup-tag {
-      padding: 2px 8px;
-      background: var(--pill-bg);
-      color: var(--pill-text);
-      font-size: 10px;
-      font-weight: 600;
-      border-radius: 6px;
-      border: 1px solid var(--border);
-    }
-    .popup-footer { padding: 10px 12px; background: var(--footer-bg); }
-    .directions-btn {
-      width: 100%;
-      padding: 8px;
-      background: var(--brand-600);
-      color: white;
-      border: none;
-      border-radius: 10px;
-      font-size: 11.5px;
-      font-weight: 700;
-      font-family: inherit;
-      letter-spacing: 0.04em;
-      cursor: pointer;
-      display: flex;
-      align-items: center;
-      justify-content: center;
-      gap: 6px;
-      transition: background 0.13s, transform 0.1s;
-      -webkit-tap-highlight-color: transparent;
-    }
-    .directions-btn:hover { background: var(--brand-700); }
-    .directions-btn:active { transform: scale(0.97); }
-
-    /* ============================
-       UTILITY
-    ============================ */
-    .hide { display: none !important; }
-    svg { pointer-events: none; }
-
-    /* FIXED: Prevent text selection on buttons */
-    button { user-select: none; -webkit-user-select: none; }
-
-    /* FIXED: Smooth rendering on retina / high-DPI */
-    @media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
-      .marker-pin { box-shadow: 0 2px 8px rgba(0,0,0,0.28); }
-    }
-
-    /* FIXED: Respect reduced motion preference */
-    @media (prefers-reduced-motion: reduce) {
-      *, *::before, *::after { transition-duration: 0ms !important; animation-duration: 0ms !important; }
-    }
+    /* Custom scrollbar */
+    ::-webkit-scrollbar { width: 5px; height: 5px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 10px; }
+    .dark ::-webkit-scrollbar-thumb { background: #334155; }
   </style>
 </head>
+<body class="font-sans antialiased text-slate-800 bg-slate-50 dark:bg-slate-950 dark:text-slate-100 flex h-[100dvh] w-screen overflow-hidden">
 
-<body>
+  <!-- Mobile Backdrop Overlay -->
+  <div id="sidebarBackdrop" class="fixed inset-0 bg-black/50 backdrop-blur-sm z-30 transition-opacity opacity-0 pointer-events-none md:hidden" onclick="closeSidebar()"></div>
 
-  <!-- Backdrop (mobile only) -->
-  <div id="sidebarBackdrop"></div>
-
-  <!-- Sidebar -->
-  <aside id="sidebar">
-    <!-- Drag handle (mobile) -->
-    <div class="drag-handle"></div>
-
-    <!-- Header -->
-    <div class="sidebar-header">
-      <div class="sidebar-header-top">
-        <div class="sidebar-logo">
-          <div class="sidebar-logo-icon">
-            <i data-lucide="graduation-cap" style="width:20px;height:20px;"></i>
+  <!-- Responsive Sidebar -->
+  <aside id="sidebar" class="z-40 w-full md:w-96 bg-white dark:bg-slate-900 shadow-2xl flex flex-col h-full shrink-0 border-r border-slate-200 dark:border-slate-800 md:translate-x-0">
+    
+    <div class="p-4 sm:p-5 border-b border-slate-100 dark:border-slate-800 bg-gradient-to-r from-brand-900 via-brand-800 to-brand-700 text-white flex flex-col justify-between shadow-sm">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 sm:w-10 sm:h-10 rounded-xl bg-white/15 backdrop-blur flex items-center justify-center shadow-inner">
+            <i data-lucide="graduation-cap" class="w-5 h-5 sm:w-6 sm:h-6 text-white"></i>
           </div>
           <div>
-            <div class="sidebar-title">UoC Science</div>
-            <div class="sidebar-subtitle">Faculty Campus Navigator</div>
+            <h1 class="text-base sm:text-lg font-bold tracking-tight leading-tight">UoC Science</h1>
+            <p class="text-[11px] sm:text-xs text-brand-100 font-medium">Faculty Campus Navigator</p>
           </div>
         </div>
-        <div class="sidebar-header-actions">
-          <button class="icon-btn" id="themeToggleBtn" title="Toggle theme">
-            <i id="themeIcon" data-lucide="moon" style="width:16px;height:16px;"></i>
+        <div class="flex items-center gap-1.5">
+          <button id="themeToggleBtn" class="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition active:scale-95">
+            <i id="themeIcon" data-lucide="moon" class="w-4 h-4"></i>
           </button>
-          <button class="icon-btn" id="closeSidebarBtn" title="Close">
-            <i data-lucide="x" style="width:16px;height:16px;"></i>
+          <button id="closeSidebarBtn" class="w-8 h-8 rounded-lg bg-white/15 hover:bg-white/25 flex items-center justify-center text-white transition active:scale-95" onclick="closeSidebar()">
+            <i data-lucide="x" class="w-4 h-4 sm:w-4 sm:h-4"></i>
           </button>
         </div>
       </div>
+      <p class="text-[11px] text-white/80 mt-2.5 hidden sm:block">Select any department or hall to view details and get directions.</p>
     </div>
 
-    <!-- Search & Filters -->
-    <div class="sidebar-search">
-      <div class="search-wrap">
-        <span class="search-icon">
-          <i data-lucide="search" style="width:15px;height:15px;"></i>
-        </span>
-        <input type="text" id="searchInput" class="search-input" placeholder="Search buildings, labs, halls…">
-        <button id="clearSearchBtn" class="clear-btn" title="Clear">
-          <i data-lucide="x" style="width:14px;height:14px;"></i>
+    <!-- Search & Category Filters -->
+    <div class="p-3 sm:p-4 border-b border-slate-100 dark:border-slate-800 bg-slate-50/70 dark:bg-slate-900/90 flex flex-col gap-2.5">
+      <div class="relative">
+        <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2"></i>
+        <input type="text" id="searchInput" placeholder="Search buildings, labs, halls..." class="w-full pl-9 pr-8 py-2 bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 text-slate-800 dark:text-slate-100 rounded-lg text-xs sm:text-sm focus:outline-none focus:ring-2 focus:ring-brand-500 transition shadow-sm placeholder:text-slate-400 dark:placeholder:text-slate-500">
+        <button id="clearSearchBtn" class="hidden absolute right-2.5 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600">
+          <i data-lucide="x-circle" class="w-4 h-4"></i>
         </button>
       </div>
-      <div class="cat-pills" id="catPills">
-        <button class="cat-pill active" data-cat="All">All (<span id="totalCount">23</span>)</button>
-        <button class="cat-pill" data-cat="Academic">Academic</button>
-        <button class="cat-pill" data-cat="Lecture Hall">Theatres</button>
-        <button class="cat-pill" data-cat="Auditorium">Auditoriums</button>
-        <button class="cat-pill" data-cat="Administration">Admin</button>
-        <button class="cat-pill" data-cat="Research">Research</button>
-        <button class="cat-pill" data-cat="Services">Services</button>
+      <div class="flex items-center gap-1.5 overflow-x-auto pb-1 no-scrollbar text-xs">
+        <button class="cat-pill active px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-brand-600 text-white shadow-sm" data-category="All">All (<span id="totalCount">23</span>)</button>
+        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Academic">Academic</button>
+        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Lecture Hall">Theatres</button>
+        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Auditorium">Auditoriums</button>
+        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Administration">Admin</button>
+        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Research">Research</button>
+        <button class="cat-pill px-2.5 py-1 rounded-full text-[11px] font-medium transition shrink-0 bg-slate-200/80 dark:bg-slate-800 text-slate-600 dark:text-slate-300 hover:bg-slate-300" data-category="Services">Services</button>
       </div>
     </div>
 
     <!-- Location List -->
-    <div class="location-list" id="locationList"></div>
+    <div class="flex-1 overflow-y-auto p-2.5 sm:p-3" id="locationList"></div>
 
-    <!-- Footer -->
-    <div class="sidebar-footer">
+    <div class="p-3 border-t border-slate-100 dark:border-slate-800 bg-slate-50 dark:bg-slate-900/70 text-[11px] flex items-center justify-between text-slate-400">
       <span>Faculty of Science, Colombo 07</span>
-      <span class="live-indicator">
-        <span class="live-dot"></span> Live Map
-      </span>
+      <span class="inline-flex items-center gap-1"><span class="w-2 h-2 rounded-full bg-emerald-500"></span> Live Map</span>
     </div>
   </aside>
 
-  <!-- Main Map Area -->
-  <main>
+  <main class="flex-1 relative h-full w-full overflow-hidden">
     <div id="map"></div>
 
-    <!-- Top-Left Controls -->
-    <div class="map-controls-top">
-      <button class="map-btn" id="openSidebarBtn">
-        <i data-lucide="menu" style="width:16px;height:16px;color:var(--brand-600);"></i>
-        <span>Explore</span>
+    <!-- Floating Top-Left Controls -->
+    <div class="absolute top-4 left-4 z-20 flex items-center gap-2.5">
+      <button id="openSidebarBtn" class="px-3.5 py-2.5 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 hover:text-brand-600 dark:hover:text-brand-400 rounded-xl shadow-lg border border-slate-200/80 dark:border-slate-800 flex items-center gap-2 transition active:scale-95 text-xs sm:text-sm font-semibold" onclick="toggleSidebar()">
+        <i data-lucide="menu" class="w-4 h-4 text-brand-600 dark:text-brand-400"></i>
+        <span>Explore Places</span>
       </button>
-      <div class="layer-switcher" id="layerSwitcher">
-        <button class="layer-btn active" data-layer="streets">Streets</button>
-        <button class="layer-btn" data-layer="satellite">Satellite</button>
-        <button class="layer-btn" data-layer="dark">Dark</button>
+
+      <div class="hidden sm:flex items-center bg-white/95 dark:bg-slate-900/95 backdrop-blur rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 p-1 gap-1 text-xs">
+        <button id="layerStreetBtn" class="layer-btn active px-2.5 py-1.5 rounded-lg font-medium text-white bg-brand-600 transition" onclick="switchMapLayer('streets')">Streets</button>
+        <button id="layerSatBtn" class="layer-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="switchMapLayer('satellite')">Satellite</button>
+        <button id="layerDarkBtn" class="layer-btn px-2.5 py-1.5 rounded-lg font-medium text-slate-600 dark:text-slate-300 hover:bg-slate-100 dark:hover:bg-slate-800 transition" onclick="switchMapLayer('dark')">Dark Matter</button>
       </div>
     </div>
 
-    <!-- Bottom-Right Controls -->
-    <div class="map-controls-bottom">
-      <!-- Mobile layer toggle -->
-      <button class="map-btn-icon" id="mobileLayerBtn" style="display:flex;" title="Toggle layer">
-        <i data-lucide="layers" style="width:18px;height:18px;color:var(--brand-600);"></i>
-      </button>
-
-      <button class="map-btn-icon" id="locateMeBtn" title="My location">
-        <i data-lucide="crosshair" style="width:18px;height:18px;"></i>
-      </button>
-
-      <div class="zoom-btns">
-        <button class="zoom-btn" id="zoomInBtn" title="Zoom in">
-          <i data-lucide="plus" style="width:18px;height:18px;"></i>
-        </button>
-        <button class="zoom-btn" id="zoomOutBtn" title="Zoom out">
-          <i data-lucide="minus" style="width:18px;height:18px;"></i>
+    <!-- Floating Bottom-Right Controls -->
+    <div class="absolute bottom-5 right-4 sm:bottom-6 sm:right-6 z-20 flex flex-col items-end gap-2.5">
+      <div class="sm:hidden">
+        <button id="mobileLayerToggleBtn" class="w-11 h-11 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-100 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center transition active:scale-95">
+          <i data-lucide="layers" class="w-5 h-5 text-brand-600 dark:text-brand-400"></i>
         </button>
       </div>
-
-      <button class="map-btn-accent" id="resetMapBtn" title="Reset view">
-        <i data-lucide="compass" style="width:18px;height:18px;"></i>
+      <button id="locateMeBtn" class="w-11 h-11 sm:w-12 sm:h-12 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-200 hover:text-brand-600 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 flex items-center justify-center transition active:scale-95">
+        <i data-lucide="crosshair" class="w-5 h-5"></i>
       </button>
-    </div>
-
-    <!-- Route Info Box -->
-    <div id="floating-route-info">
-      <div>
-        <div class="route-label">Route Info</div>
-        <div id="route-text">Calculating…</div>
+      <div class="bg-white dark:bg-slate-900 rounded-xl shadow-lg border border-slate-200 dark:border-slate-800 overflow-hidden flex flex-col">
+        <button id="zoomInBtn" class="w-11 h-11 sm:w-12 sm:h-12 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-600 flex items-center justify-center border-b border-slate-100 dark:border-slate-800 transition">
+          <i data-lucide="plus" class="w-5 h-5"></i>
+        </button>
+        <button id="zoomOutBtn" class="w-11 h-11 sm:w-12 sm:h-12 text-slate-700 dark:text-slate-200 hover:bg-slate-50 dark:hover:bg-slate-800 hover:text-brand-600 flex items-center justify-center transition">
+          <i data-lucide="minus" class="w-5 h-5"></i>
+        </button>
       </div>
-      <div class="route-divider"></div>
-      <button class="clear-route-btn" id="clearRouteBtn" title="Clear route">
-        <i data-lucide="x" style="width:16px;height:16px;"></i>
+      <button id="resetMapBtn" class="w-11 h-11 sm:w-12 sm:h-12 bg-brand-600 hover:bg-brand-700 text-white rounded-xl shadow-lg shadow-brand-500/30 flex items-center justify-center transition active:scale-95">
+        <i data-lucide="compass" class="w-5 h-5"></i>
       </button>
     </div>
 
-    <!-- Toast -->
-    <div id="toastBox">
-      <i data-lucide="info" style="width:14px;height:14px;color:#38bdf8;flex-shrink:0;"></i>
+    <!-- Floating Route Info Box (Distance & Time) -->
+    <div id="floating-route-info" class="absolute bottom-6 left-1/2 -translate-x-1/2 z-50 bg-white/95 dark:bg-slate-900/95 backdrop-blur-md shadow-2xl border border-brand-500/30 rounded-2xl px-5 py-3 transition-all duration-300 opacity-0 pointer-events-none translate-y-4 flex items-center gap-5">
+      <div class="flex flex-col">
+        <span class="text-[10px] text-slate-500 dark:text-slate-400 font-bold uppercase tracking-widest mb-0.5">Route Info</span>
+        <span id="route-text" class="text-sm font-bold text-brand-700 dark:text-brand-400 flex items-center gap-3">
+          Calculating...
+        </span>
+      </div>
+      <div class="w-px h-8 bg-slate-200 dark:bg-slate-700"></div>
+      <button onclick="clearRoute()" class="w-9 h-9 flex items-center justify-center bg-rose-100 dark:bg-rose-500/20 text-rose-600 dark:text-rose-400 hover:bg-rose-200 rounded-xl transition active:scale-95">
+        <i data-lucide="x" class="w-4 h-4"></i>
+      </button>
+    </div>
+
+    <!-- Toast Notification -->
+    <div id="toastBox" class="fixed top-5 right-5 sm:right-auto sm:left-1/2 sm:-translate-x-1/2 z-50 bg-slate-900/90 dark:bg-white/95 text-white dark:text-slate-900 px-4 py-2.5 rounded-xl shadow-2xl text-xs sm:text-sm font-medium flex items-center gap-2 pointer-events-none transition-all duration-300 opacity-0 translate-y-[-10px]">
+      <i data-lucide="info" class="w-4 h-4 text-brand-400"></i>
       <span id="toastMessage">Campus view centered</span>
     </div>
   </main>
 
-  <!-- Scripts -->
-  <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
-  <script src="https://unpkg.com/leaflet-routing-machine@3.2.12/dist/leaflet-routing-machine.js"></script>
-
+  <script src="https://unpkg.com/leaflet-routing-machine@latest/dist/leaflet-routing-machine.js"></script>
   <script>
-    // ==========================================
-    // DATA
-    // ==========================================
+    lucide.createIcons();
+
     const locations = [
-      { id:'1',  name:'Student Service Centre (Upcoming)', category:'Services',       lat:6.8990, lng:79.8591, icon:'users',          color:'#eab308', description:'Upcoming Student Service Centre (Building 1)',     features:['Student Services','Help Desk'] },
-      { id:'2',  name:'Department of Nuclear Science',     category:'Academic',       lat:6.8994, lng:79.8587, icon:'atom',            color:'#d97706', description:'Department of Nuclear Science (Building 2)',        features:['Laboratories','Research'] },
-      { id:'3',  name:'Department of Statistics New Building', category:'Academic',   lat:6.9001, lng:79.8588, icon:'bar-chart-2',     color:'#f97316', description:'Department of Statistics New Building (Building 3)',features:['Lecture Rooms','Labs'] },
-      { id:'4',  name:'Climate Change Research Laboratory',category:'Research',       lat:6.9005, lng:79.8589, icon:'thermometer',     color:'#16a34a', description:'Climate Change Research Laboratory (Building 4)',   features:['Research Lab'] },
-      { id:'5',  name:'Department of Plant Sciences (NBLT)',category:'Academic',      lat:6.9010, lng:79.8588, icon:'leaf',            color:'#65a30d', description:'Department of Plant Sciences (Building 5)',         features:['Lecture Theatre','Laboratories'] },
-      { id:'6',  name:'Dept of Zoology & Environment Sciences (ZSR)', category:'Academic', lat:6.9001, lng:79.8594, icon:'bug', color:'#4d7c0f', description:'Department of Zoology (Building 6)',                features:['Laboratories','Research'] },
-      { id:'7',  name:'Chemistry Lecture Theatre (NLT/PLT/CLT)', category:'Lecture Hall', lat:6.9011, lng:79.8594, icon:'presentation', color:'#be123c', description:'Chemistry Lecture Theatres (Building 7)', features:['NLT','PLT','CLT'] },
-      { id:'8',  name:'Department of Chemistry',           category:'Academic',       lat:6.9014, lng:79.8597, icon:'flask-conical',   color:'#be123c', description:'Department of Chemistry (Building 8)',              features:['Laboratories','Staff Rooms'] },
-      { id:'9',  name:'ITSC / Tissue Culture Building',   category:'Research',       lat:6.9016, lng:79.8600, icon:'microscope',      color:'#ca8a04', description:'ITSC / Tissue Culture (Building 9)',               features:['ITSC','Tissue Culture Lab'] },
-      { id:'10', name:'Information & Learning Centre',     category:'Services',       lat:6.9011, lng:79.8600, icon:'book-open',       color:'#0284c7', description:'Information and Learning Centre (Building 10)',     features:['Study Areas','Computer Lab'] },
-      { id:'11', name:'Natural History Museum',            category:'Academic',       lat:6.9007, lng:79.8598, icon:'library',         color:'#15803d', description:'Natural History Museum (Building 11)',              features:['Exhibitions'] },
-      { id:'12', name:"Dean's Office",                    category:'Administration', lat:6.9007, lng:79.8601, icon:'briefcase',       color:'#b45309', description:"Dean's Office (Building 12)",                      features:['Administration'] },
-      { id:'13', name:"Dean's Office (Annex)",            category:'Administration', lat:6.9005, lng:79.8601, icon:'briefcase',       color:'#b45309', description:"Dean's Office Annex (Building 13)",                features:['Administration'] },
-      { id:'14', name:"King George's (KG) Hall",          category:'Auditorium',     lat:6.9011, lng:79.8604, icon:'landmark',        color:'#0d9488', description:"King George's Hall (Building 14)",                 features:['Main Hall','Events'] },
-      { id:'15', name:'New IS & MF Laboratory',           category:'Academic',       lat:6.9015, lng:79.8605, icon:'monitor',         color:'#e11d48', description:'New IS & MF Lab (Building 15)',                    features:['Computer Labs'] },
-      { id:'16', name:'Department of Physics (PLR / NPLT)',category:'Academic',      lat:6.9009, lng:79.8608, icon:'zap',             color:'#ea580c', description:'Department of Physics (Building 16)',               features:['Physics Labs','Lecture Rooms'] },
-      { id:'17', name:'Department of Mathematics (C22)',  category:'Academic',       lat:6.9003, lng:79.8603, icon:'calculator',      color:'#4f46e5', description:'Department of Mathematics (Building 17)',          features:['Lecture Rooms','Staff Rooms'] },
-      { id:'18', name:'Department of Statistics',         category:'Academic',       lat:6.9005, lng:79.8610, icon:'pie-chart',       color:'#8b5cf6', description:'Department of Statistics Old Building (Building 18)',features:['Offices'] },
-      { id:'19', name:'New Arts Theatre (NAT)',           category:'Auditorium',     lat:6.8997, lng:79.8608, icon:'mic',             color:'#db2777', description:'New Arts Theatre (Building 19)',                   features:['Large Seating','Stage'] },
-      { id:'20', name:'Prof. V.K. Samaranayake Auditorium',category:'Auditorium',   lat:6.9005, lng:79.8613, icon:'users',           color:'#7c3aed', description:'Prof. V.K. Samaranayake Auditorium (Building 20)',  features:['Auditorium','Events'] },
-      { id:'21', name:'UCSC',                             category:'Academic',       lat:6.9008, lng:79.8615, icon:'monitor-play',    color:'#6366f1', description:'University of Colombo School of Computing (Building 21)', features:['Computing Labs','Lecture Halls'] },
-      { id:'22', name:"Marshal's Office",                 category:'Administration', lat:6.9001, lng:79.8615, icon:'shield',          color:'#c2410c', description:"Marshal's Office (Building 22)",                  features:['Security','Administration'] },
-      { id:'23', name:'Medical Centre',                   category:'Services',       lat:6.9002, lng:79.8617, icon:'plus-circle',     color:'#dc2626', description:'Medical Centre (Building 23)',                     features:['First Aid','Doctor'] }
+      { id: '1', name: 'Student Service Centre (Upcoming)', category: 'Services', lat: 6.8990, lng: 79.8591, icon: 'users', color: '#eab308', description: 'Upcoming Student Service Centre (Building 1)', features: ['Student Services', 'Help Desk'] },
+      { id: '2', name: 'Department of Nuclear Science', category: 'Academic', lat: 6.8994, lng: 79.8587, icon: 'atom', color: '#d97706', description: 'Department of Nuclear Science (Building 2)', features: ['Laboratories', 'Research'] },
+      { id: '3', name: 'Department of Statistics New Building', category: 'Academic', lat: 6.9001, lng: 79.8588, icon: 'bar-chart-2', color: '#f97316', description: 'Department of Statistics New Building (Building 3)', features: ['Lecture Rooms', 'Labs'] },
+      { id: '4', name: 'Climate Change Research Laboratory', category: 'Research', lat: 6.9005, lng: 79.8589, icon: 'thermometer', color: '#16a34a', description: 'Climate Change Research Laboratory (Building 4)', features: ['Research Lab'] },
+      { id: '5', name: 'Department of Plant Sciences (NBLT)', category: 'Academic', lat: 6.9010, lng: 79.8588, icon: 'leaf', color: '#eab308', description: 'Department of Plant Sciences (Building 5)', features: ['Lecture Theatre', 'Laboratories'] },
+      { id: '6', name: 'Dept of Zoology & Environment Sciences (ZSR)', category: 'Academic', lat: 6.9001, lng: 79.8594, icon: 'bug', color: '#4d7c0f', description: 'Department of Zoology (Building 6)', features: ['Laboratories', 'Research'] },
+      { id: '7', name: 'Chemistry Lecture Theatre (NLT/PLT/CLT)', category: 'Lecture Hall', lat: 6.9011, lng: 79.8594, icon: 'presentation', color: '#be123c', description: 'Chemistry Lecture Theatres (Building 7)', features: ['NLT', 'PLT', 'CLT'] },
+      { id: '8', name: 'Department of Chemistry', category: 'Academic', lat: 6.9014, lng: 79.8597, icon: 'flask-conical', color: '#be123c', description: 'Department of Chemistry (Building 8)', features: ['Laboratories', 'Staff Rooms'] },
+      { id: '9', name: 'ITSC / Tissue Culture Building', category: 'Research', lat: 6.9016, lng: 79.8600, icon: 'microscope', color: '#ca8a04', description: 'ITSC / Tissue Culture (Building 9)', features: ['ITSC', 'Tissue Culture Lab'] },
+      { id: '10', name: 'Information & Learning Centre', category: 'Services', lat: 6.9011, lng: 79.8600, icon: 'book-open', color: '#0284c7', description: 'Information and Learning Centre (Building 10)', features: ['Study Areas', 'Computer Lab'] },
+      { id: '11', name: 'Natural History Museum', category: 'Academic', lat: 6.9007, lng: 79.8598, icon: 'library', color: '#15803d', description: 'Natural History Museum (Building 11)', features: ['Exhibitions'] },
+      { id: '12', name: 'Dean\'s Office', category: 'Administration', lat: 6.9007, lng: 79.8601, icon: 'briefcase', color: '#b45309', description: 'Dean\'s Office (Building 12)', features: ['Administration'] },
+      { id: '13', name: 'Dean\'s Office (Annex)', category: 'Administration', lat: 6.9005, lng: 79.8601, icon: 'briefcase', color: '#b45309', description: 'Dean\'s Office Annex (Building 13)', features: ['Administration'] },
+      { id: '14', name: 'King George\'s (KG) Hall', category: 'Auditorium', lat: 6.9011, lng: 79.8604, icon: 'landmark', color: '#0d9488', description: 'King George\'s Hall (Building 14)', features: ['Main Hall', 'Events'] },
+      { id: '15', name: 'New IS & MF Laboratory', category: 'Academic', lat: 6.9015, lng: 79.8605, icon: 'monitor', color: '#e11d48', description: 'New IS & MF Lab (Building 15)', features: ['Computer Labs'] },
+      { id: '16', name: 'Department of Physics (PLR / NPLT)', category: 'Academic', lat: 6.9009, lng: 79.8608, icon: 'zap', color: '#ea580c', description: 'Department of Physics (Building 16)', features: ['Physics Labs', 'Lecture Rooms'] },
+      { id: '17', name: 'Department of Mathematics (C22)', category: 'Academic', lat: 6.9003, lng: 79.8603, icon: 'calculator', color: '#4f46e5', description: 'Department of Mathematics (Building 17)', features: ['Lecture Rooms', 'Staff Rooms'] },
+      { id: '18', name: 'Department of Statistics', category: 'Academic', lat: 6.9005, lng: 79.8610, icon: 'pie-chart', color: '#8b5cf6', description: 'Department of Statistics Old Building (Building 18)', features: ['Offices'] },
+      { id: '19', name: 'New Arts Theatre (NAT)', category: 'Auditorium', lat: 6.8997, lng: 79.8608, icon: 'mic', color: '#db2777', description: 'New Arts Theatre (Building 19)', features: ['Large Seating', 'Stage'] },
+      { id: '20', name: 'Prof. V.K. Samaranayake Auditorium', category: 'Auditorium', lat: 6.9005, lng: 79.8613, icon: 'users', color: '#7c3aed', description: 'Prof. V.K. Samaranayake Auditorium (Building 20)', features: ['Auditorium', 'Events'] },
+      { id: '21', name: 'UCSC', category: 'Academic', lat: 6.9008, lng: 79.8615, icon: 'monitor-play', color: '#6366f1', description: 'University of Colombo School of Computing (Building 21)', features: ['Computing Labs', 'Lecture Halls'] },
+      { id: '22', name: 'Marshal\'s Office', category: 'Administration', lat: 6.9001, lng: 79.8615, icon: 'shield', color: '#c2410c', description: 'Marshal\'s Office (Building 22)', features: ['Security', 'Administration'] },
+      { id: '23', name: 'Medical Centre', category: 'Services', lat: 6.9002, lng: 79.8617, icon: 'plus-circle', color: '#9a3412', description: 'Medical Centre (Building 23)', features: ['First Aid', 'Doctor'] }
     ];
 
-    // ==========================================
-    // STATE
-    // ==========================================
-    const MAP_CENTER   = [6.9006, 79.8601];
-    const CAMPUS_BOUNDS = L.latLngBounds([6.8975, 79.8570], [6.9035, 79.8635]);
-    let markers        = {};
+    const MAP_CENTER = [6.9006, 79.8601]; 
+    let markers = {};
     let activeCategory = 'All';
-    let isDarkMode     = false;
-    let currentLayerKey= 'streets';
-    let userLat        = 6.8990;
-    let userLng        = 79.8591;
-    let userMarker     = null;
-    let routingControl = null;
+    let isDarkMode = false;
+    let userLocationMarker = null;
+    
+    let userLat = 6.8990; 
+    let userLng = 79.8591;
 
-    // ==========================================
-    // MAP SETUP
-    // ==========================================
-    const tileLayers = {
-      streets:   L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: '© Google Maps' }),
-      satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20, attribution: '© Google Maps' }),
-      dark:      L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains:'abcd', maxZoom: 20, attribution: '© CartoDB' })
+    const strictCampusBounds = L.latLngBounds([6.8980, 79.8575], [6.9030, 79.8630]);
+
+    const mapLayers = {
+      streets: L.tileLayer('https://mt1.google.com/vt/lyrs=m&x={x}&y={y}&z={z}', { maxZoom: 20 }),
+      satellite: L.tileLayer('https://mt1.google.com/vt/lyrs=y&x={x}&y={y}&z={z}', { maxZoom: 20 }),
+      dark: L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', { subdomains: 'abcd', maxZoom: 20 })
     };
 
+    let currentLayerKey = 'streets';
+
     const map = L.map('map', {
-      center: MAP_CENTER,
-      zoom: 18,
-      minZoom: 17,
-      maxZoom: 20,
-      zoomControl: false,
-      maxBounds: CAMPUS_BOUNDS,
-      maxBoundsViscosity: 0.95,
-      // FIXED: Smoother touch handling on mobile
-      tap: true,
-      tapTolerance: 15,
-      bounceAtZoomLimits: false
+      center: MAP_CENTER, zoom: 18, minZoom: 17, maxZoom: 20, zoomControl: false, maxBounds: strictCampusBounds, maxBoundsViscosity: 1.0
     });
 
-    tileLayers.streets.addTo(map);
-
-    // FIXED: Invalidate map size after layout to avoid grey tiles in Chrome
-    window.addEventListener('load', () => {
-      setTimeout(() => map.invalidateSize(), 150);
-    });
-
-    // ==========================================
-    // GPS
-    // ==========================================
-    function updateUserMarker(lat, lng) {
-      userLat = lat; userLng = lng;
-      if (userMarker) map.removeLayer(userMarker);
-      userMarker = L.marker([lat, lng], {
-        icon: L.divIcon({ className: 'user-gps-marker', html: '<div class="user-gps-pulse"></div>', iconSize: [18, 18], iconAnchor: [9, 9] })
-      }).addTo(map);
-    }
+    mapLayers.streets.addTo(map);
 
     if (navigator.geolocation) {
-      navigator.geolocation.watchPosition(
-        pos => updateUserMarker(pos.coords.latitude, pos.coords.longitude),
-        () => {}, // silent fail; keep default coords
-        { enableHighAccuracy: true, maximumAge: 5000 }
-      );
+      navigator.geolocation.watchPosition(pos => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        if (userLocationMarker) map.removeLayer(userLocationMarker);
+        userLocationMarker = L.marker([userLat, userLng], { 
+          icon: L.divIcon({ className: 'user-gps-marker', html: `<div class="user-gps-pulse"></div>`, iconSize: [20, 20] }) 
+        }).addTo(map);
+      }, err => {
+        userLat = 6.8990;
+        userLng = 79.8591;
+      }, { enableHighAccuracy: true });
     }
 
-    // ==========================================
-    // MARKERS
-    // ==========================================
     locations.forEach(loc => {
-      const iconHtml = `
-        <div class="marker-pin" style="background:${loc.color};">
-          <i data-lucide="${loc.icon}" style="width:14px;height:14px;"></i>
-        </div>
-        <div class="marker-pointer" style="color:${loc.color};"></div>
-      `;
-      const icon = L.divIcon({
-        className: 'custom-marker',
-        html: iconHtml,
-        iconSize: [32, 42],
-        iconAnchor: [16, 42],
-        popupAnchor: [0, -44]
-      });
+      const iconHtml = `<div class="marker-pin" style="background: ${loc.color};"><i data-lucide="${loc.icon}" style="width: 16px; height: 16px;"></i></div><div class="marker-pointer" style="color: ${loc.color}"></div>`;
+      const customIcon = L.divIcon({ className: 'custom-marker', html: iconHtml, iconSize: [34, 44], iconAnchor: [17, 44], popupAnchor: [0, -42] });
 
       const popupHtml = `
-        <div>
-          <div class="popup-header" style="background:${loc.color};">
-            <i data-lucide="${loc.icon}" style="width:18px;height:18px;flex-shrink:0;"></i>
-            <div>
-              <h3>${loc.name}</h3>
-              <p>${loc.category}</p>
+        <div class="bg-white dark:bg-slate-900 transition-colors">
+          <div class="p-3.5 text-white flex items-center gap-2.5" style="background: ${loc.color};">
+             <i data-lucide="${loc.icon}" class="w-5 h-5"></i>
+             <div>
+               <h3 class="font-bold text-xs sm:text-sm leading-tight">${loc.name}</h3>
+               <p class="text-[10px] opacity-90 uppercase tracking-wider font-semibold">${loc.category}</p>
+             </div>
+          </div>
+          <div class="p-3.5 bg-white dark:bg-slate-900 border-b border-slate-100 dark:border-slate-800">
+            <p class="text-xs text-slate-600 dark:text-slate-300 leading-relaxed mb-3">${loc.description}</p>
+            <div class="flex flex-wrap gap-1">
+              ${loc.features.map(f => `<span class="px-2 py-0.5 bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 text-[10px] font-medium rounded-md border border-slate-200 dark:border-slate-700">${f}</span>`).join('')}
             </div>
           </div>
-          <div class="popup-body">
-            <p>${loc.description}</p>
-            <div class="popup-tags">
-              ${loc.features.map(f => `<span class="popup-tag">${f}</span>`).join('')}
-            </div>
-          </div>
-          <div class="popup-footer">
-            <button class="directions-btn" onclick="startRoute(${loc.lat},${loc.lng})">
-              <i data-lucide="navigation" style="width:13px;height:13px;"></i>
-              GET DIRECTIONS
+          <div class="p-2.5 bg-slate-50 dark:bg-slate-900/50">
+            <button onclick="startRoute(${loc.lat}, ${loc.lng})" class="w-full py-2 bg-brand-600 hover:bg-brand-700 text-white text-[11px] font-bold tracking-wide rounded-lg shadow-sm flex items-center justify-center gap-2 transition active:scale-95">
+              <i data-lucide="navigation" class="w-3.5 h-3.5"></i> GET DIRECTIONS
             </button>
           </div>
         </div>
       `;
 
-      const marker = L.marker([loc.lat, loc.lng], { icon }).bindPopup(popupHtml).addTo(map);
+      const marker = L.marker([loc.lat, loc.lng], { icon: customIcon }).bindPopup(popupHtml).addTo(map);
       markers[loc.id] = marker;
       marker.on('popupopen', () => setTimeout(() => lucide.createIcons(), 10));
     });
 
-    // Init icons after all markers
-    setTimeout(() => lucide.createIcons(), 120);
+    setTimeout(() => lucide.createIcons(), 100);
 
-    // ==========================================
-    // SIDEBAR LIST RENDER
-    // ==========================================
-    function renderList(data) {
-      const el = document.getElementById('locationList');
-      document.getElementById('totalCount').textContent = data.length;
-
-      if (data.length === 0) {
-        el.innerHTML = '<div class="location-empty">No matching places found.</div>';
+    function renderSidebarList(data) {
+      const locationList = document.getElementById('locationList');
+      locationList.innerHTML = '';
+      document.getElementById('totalCount').innerText = data.length;
+      
+      if(data.length === 0) {
+        locationList.innerHTML = `<div class="p-6 text-center text-xs text-slate-400">No matching places found.</div>`;
         return;
       }
 
-      el.innerHTML = '';
-      const frag = document.createDocumentFragment();
-
       data.forEach(loc => {
         const item = document.createElement('div');
-        item.className = 'location-item';
+        item.className = 'group p-2.5 mb-1.5 rounded-xl border border-slate-100 dark:border-slate-800/80 bg-white dark:bg-slate-800/60 hover:border-brand-300 dark:hover:border-brand-500/50 hover:shadow-sm hover:bg-brand-50/50 dark:hover:bg-slate-800 cursor-pointer transition flex items-start gap-2.5';
+        item.onclick = () => {
+          if (window.innerWidth < 768) closeSidebar();
+          map.flyTo([loc.lat, loc.lng], 19, { duration: 1.2 });
+          setTimeout(() => { markers[loc.id].openPopup(); lucide.createIcons(); }, 1200);
+        };
         item.innerHTML = `
-          <div class="location-icon" style="background:${loc.color};">
-            <i data-lucide="${loc.icon}" style="width:16px;height:16px;"></i>
+          <div class="w-9 h-9 rounded-lg flex items-center justify-center shrink-0 mt-0.5 text-white shadow-sm" style="background: ${loc.color}">
+            <i data-lucide="${loc.icon}" class="w-4 h-4"></i>
           </div>
-          <div class="location-info">
-            <div class="location-name">${loc.name}</div>
-            <div class="location-meta">
-              <span class="location-badge">${loc.category}</span>
-              <span class="location-desc">${loc.description}</span>
+          <div class="flex-1 min-w-0">
+            <h4 class="text-xs sm:text-sm font-semibold text-slate-800 dark:text-slate-100 truncate group-hover:text-brand-600 transition">${loc.name}</h4>
+            <div class="flex items-center gap-2 mt-0.5">
+              <span class="text-[10px] font-medium px-1.5 py-0.5 rounded bg-slate-100 dark:bg-slate-700 text-slate-600 dark:text-slate-300">${loc.category}</span>
+              <p class="text-[11px] text-slate-400 truncate">${loc.description}</p>
             </div>
           </div>
         `;
-        item.addEventListener('click', () => {
-          if (window.innerWidth < 768) closeSidebar();
-          map.flyTo([loc.lat, loc.lng], 19, { duration: 1.1 });
-          setTimeout(() => { markers[loc.id].openPopup(); lucide.createIcons(); }, 1100);
-        });
-        frag.appendChild(item);
+        locationList.appendChild(item);
       });
-
-      el.appendChild(frag);
       lucide.createIcons();
     }
 
-    renderList(locations);
+    renderSidebarList(locations);
 
-    // ==========================================
-    // SEARCH
-    // ==========================================
-    const searchInput   = document.getElementById('searchInput');
-    const clearSearchBtn= document.getElementById('clearSearchBtn');
+    const searchInput = document.getElementById('searchInput');
+    const clearSearchBtn = document.getElementById('clearSearchBtn');
 
-    function getFiltered() {
-      const q = searchInput.value.toLowerCase().trim();
-      return locations.filter(loc =>
+    searchInput.addEventListener('input', (e) => {
+      const query = e.target.value.toLowerCase().trim();
+      clearSearchBtn.classList.toggle('hidden', query.length === 0);
+      const filtered = locations.filter(loc => 
         (activeCategory === 'All' || loc.category === activeCategory) &&
-        (loc.name.toLowerCase().includes(q) || loc.description.toLowerCase().includes(q))
+        (loc.name.toLowerCase().includes(query) || loc.description.toLowerCase().includes(query))
       );
-    }
-
-    searchInput.addEventListener('input', () => {
-      clearSearchBtn.classList.toggle('visible', searchInput.value.length > 0);
-      renderList(getFiltered());
+      renderSidebarList(filtered);
     });
 
     clearSearchBtn.addEventListener('click', () => {
       searchInput.value = '';
-      clearSearchBtn.classList.remove('visible');
-      renderList(getFiltered());
+      clearSearchBtn.classList.add('hidden');
+      renderSidebarList(locations.filter(loc => activeCategory === 'All' || loc.category === activeCategory));
       searchInput.focus();
     });
 
-    // ==========================================
-    // CATEGORY FILTER
-    // ==========================================
-    document.getElementById('catPills').addEventListener('click', e => {
-      const pill = e.target.closest('.cat-pill');
-      if (!pill) return;
-
-      document.querySelectorAll('.cat-pill').forEach(p => p.classList.remove('active'));
-      pill.classList.add('active');
-      activeCategory = pill.dataset.cat;
-
-      renderList(getFiltered());
-
-      // Show/hide markers
-      locations.forEach(loc => {
-        const show = activeCategory === 'All' || loc.category === activeCategory;
-        if (show && !map.hasLayer(markers[loc.id])) markers[loc.id].addTo(map);
-        else if (!show && map.hasLayer(markers[loc.id])) map.removeLayer(markers[loc.id]);
+    document.querySelectorAll('.cat-pill').forEach(btn => {
+      btn.addEventListener('click', () => {
+        document.querySelectorAll('.cat-pill').forEach(b => {
+          b.classList.remove('bg-brand-600', 'text-white', 'shadow-sm');
+          b.classList.add('bg-slate-200/80', 'dark:bg-slate-800', 'text-slate-600', 'dark:text-slate-300');
+        });
+        btn.classList.add('bg-brand-600', 'text-white', 'shadow-sm');
+        activeCategory = btn.dataset.category;
+        
+        const query = searchInput.value.toLowerCase().trim();
+        const filtered = locations.filter(loc => 
+          (activeCategory === 'All' || loc.category === activeCategory) &&
+          (loc.name.toLowerCase().includes(query) || loc.description.toLowerCase().includes(query))
+        );
+        renderSidebarList(filtered);
+        
+        locations.forEach(loc => {
+          if (activeCategory === 'All' || loc.category === activeCategory) {
+            if (!map.hasLayer(markers[loc.id])) markers[loc.id].addTo(map);
+          } else {
+            if (map.hasLayer(markers[loc.id])) map.removeLayer(markers[loc.id]);
+          }
+        });
       });
     });
 
-    // ==========================================
-    // SIDEBAR OPEN / CLOSE
-    // ==========================================
     function openSidebar() {
-      document.getElementById('sidebar').classList.add('sidebar-open');
-      document.getElementById('sidebarBackdrop').classList.add('visible');
+      const sb = document.getElementById('sidebar');
+      if (window.innerWidth < 768) {
+        sb.classList.add('mobile-open');
+      } else {
+        sb.style.transform = 'translateX(0)';
+      }
+      document.getElementById('sidebarBackdrop').classList.replace('opacity-0', 'opacity-100');
+      document.getElementById('sidebarBackdrop').classList.remove('pointer-events-none');
     }
 
     function closeSidebar() {
-      document.getElementById('sidebar').classList.remove('sidebar-open');
-      document.getElementById('sidebarBackdrop').classList.remove('visible');
-    }
-
-    document.getElementById('openSidebarBtn').addEventListener('click', () => {
       const sb = document.getElementById('sidebar');
-      if (window.innerWidth >= 768) {
-        // Desktop: toggle left slide
-        sb.classList.toggle('sidebar-closed');
+      if (window.innerWidth < 768) {
+        sb.classList.remove('mobile-open');
       } else {
-        sb.classList.contains('sidebar-open') ? closeSidebar() : openSidebar();
+        sb.style.transform = '';
       }
-    });
+      document.getElementById('sidebarBackdrop').classList.replace('opacity-100', 'opacity-0');
+      document.getElementById('sidebarBackdrop').classList.add('pointer-events-none');
+    }
 
-    document.getElementById('closeSidebarBtn').addEventListener('click', closeSidebar);
-    document.getElementById('sidebarBackdrop').addEventListener('click', closeSidebar);
-
-    // FIXED: Hide layer switcher on mobile (use mobile toggle instead)
-    function updateLayerSwitcherVisibility() {
-      const ls = document.getElementById('layerSwitcher');
-      const mbl = document.getElementById('mobileLayerBtn');
-      if (window.innerWidth >= 640) {
-        ls.style.display = 'flex';
-        mbl.style.display = 'none';
+    function toggleSidebar() {
+      const sb = document.getElementById('sidebar');
+      if (window.innerWidth < 768) {
+        if (sb.classList.contains('mobile-open')) closeSidebar(); else openSidebar();
       } else {
-        ls.style.display = 'none';
-        mbl.style.display = 'flex';
+        if (sb.style.transform === 'translateX(0px)') closeSidebar(); else openSidebar();
       }
     }
-    updateLayerSwitcherVisibility();
-    window.addEventListener('resize', () => {
-      updateLayerSwitcherVisibility();
-      map.invalidateSize(); // FIXED: re-check map size on resize
-    });
 
-    // ==========================================
-    // MAP LAYERS
-    // ==========================================
-    function switchLayer(type) {
+    window.switchMapLayer = function(type) {
       if (currentLayerKey === type) return;
-      map.removeLayer(tileLayers[currentLayerKey]);
-      tileLayers[type].addTo(map);
+      map.removeLayer(mapLayers[currentLayerKey]);
+      mapLayers[type].addTo(map);
       currentLayerKey = type;
-
-      document.querySelectorAll('.layer-btn').forEach(b => {
-        b.classList.toggle('active', b.dataset.layer === type);
+      
+      document.querySelectorAll('.layer-btn').forEach(btn => {
+        btn.classList.remove('bg-brand-600', 'text-white');
+        btn.classList.add('text-slate-600', 'dark:text-slate-300');
       });
-      showToast('Switched to ' + type + ' view');
-    }
+      const activeBtn = document.getElementById('layer' + type.charAt(0).toUpperCase() + type.slice(1) + 'Btn');
+      if (activeBtn) activeBtn.classList.add('bg-brand-600', 'text-white');
+      showToast(`Switched to ${type} view`);
+    };
 
-    document.querySelectorAll('.layer-btn').forEach(btn => {
-      btn.addEventListener('click', () => switchLayer(btn.dataset.layer));
+    document.getElementById('mobileLayerToggleBtn').addEventListener('click', () => {
+      const modes = ['streets', 'satellite', 'dark'];
+      switchMapLayer(modes[(modes.indexOf(currentLayerKey) + 1) % modes.length]);
     });
 
-    const layers = ['streets','satellite','dark'];
-    document.getElementById('mobileLayerBtn').addEventListener('click', () => {
-      switchLayer(layers[(layers.indexOf(currentLayerKey) + 1) % layers.length]);
-    });
-
-    // ==========================================
-    // THEME TOGGLE
-    // ==========================================
     document.getElementById('themeToggleBtn').addEventListener('click', () => {
       isDarkMode = !isDarkMode;
       document.documentElement.classList.toggle('dark', isDarkMode);
-      const icon = document.getElementById('themeIcon');
-      icon.setAttribute('data-lucide', isDarkMode ? 'sun' : 'moon');
+      document.getElementById('themeIcon').setAttribute('data-lucide', isDarkMode ? 'sun' : 'moon');
+      if (isDarkMode && currentLayerKey === 'streets') switchMapLayer('dark');
+      else if (!isDarkMode && currentLayerKey === 'dark') switchMapLayer('streets');
       lucide.createIcons();
-
-      if (isDarkMode && currentLayerKey === 'streets') switchLayer('dark');
-      else if (!isDarkMode && currentLayerKey === 'dark') switchLayer('streets');
     });
 
-    // ==========================================
-    // LOCATE ME
-    // ==========================================
     document.getElementById('locateMeBtn').addEventListener('click', () => {
-      showToast('Finding your location…');
-      if (!navigator.geolocation) { showToast('Geolocation not supported'); return; }
-      navigator.geolocation.getCurrentPosition(
-        pos => {
-          updateUserMarker(pos.coords.latitude, pos.coords.longitude);
-          map.flyTo([pos.coords.latitude, pos.coords.longitude], 19);
-          showToast('Location found!');
-        },
-        () => showToast('Could not get location'),
-        { enableHighAccuracy: true }
-      );
+      showToast("Searching location...");
+      navigator.geolocation.getCurrentPosition(pos => {
+        userLat = pos.coords.latitude;
+        userLng = pos.coords.longitude;
+        if (userLocationMarker) map.removeLayer(userLocationMarker);
+        userLocationMarker = L.marker([userLat, userLng], { icon: L.divIcon({ className: 'user-gps-marker', html: `<div class="user-gps-pulse"></div>`, iconSize: [20, 20] }) }).addTo(map);
+        map.flyTo([userLat, userLng], 19);
+        showToast("Location found!");
+      }, () => showToast("Location error"), { enableHighAccuracy: true });
     });
 
-    // ==========================================
-    // ZOOM & RESET
-    // ==========================================
-    document.getElementById('zoomInBtn').addEventListener('click',  () => map.zoomIn());
-    document.getElementById('zoomOutBtn').addEventListener('click', () => map.zoomOut());
-    document.getElementById('resetMapBtn').addEventListener('click', () => {
-      map.closePopup();
-      map.flyTo(MAP_CENTER, 18);
-      showToast('Campus view centered');
-    });
-
-    // ==========================================
-    // TOAST
-    // ==========================================
-    let toastTimer = null;
-    function showToast(msg) {
-      const box = document.getElementById('toastBox');
-      document.getElementById('toastMessage').textContent = msg;
-      box.classList.add('visible');
-      clearTimeout(toastTimer);
-      toastTimer = setTimeout(() => box.classList.remove('visible'), 2600);
+    function showToast(text) {
+      const toast = document.getElementById('toastBox');
+      document.getElementById('toastMessage').innerText = text;
+      toast.classList.remove('opacity-0', 'translate-y-[-10px]');
+      toast.classList.add('opacity-100', 'translate-y-0');
+      clearTimeout(window.toastTimer);
+      window.toastTimer = setTimeout(() => { toast.classList.remove('opacity-100', 'translate-y-0'); toast.classList.add('opacity-0', 'translate-y-[-10px]'); }, 2500);
     }
 
-    // ==========================================
-    // ROUTING
-    // ==========================================
+    document.getElementById('zoomInBtn').addEventListener('click', () => map.zoomIn());
+    document.getElementById('zoomOutBtn').addEventListener('click', () => map.zoomOut());
+    document.getElementById('resetMapBtn').addEventListener('click', () => { map.closePopup(); map.flyTo(MAP_CENTER, 18); });
+
+    let routingControl = null;
+
     window.startRoute = function(destLat, destLng) {
-      if (routingControl) { map.removeControl(routingControl); routingControl = null; }
+      if (routingControl) map.removeControl(routingControl);
       map.closePopup();
+      if (window.innerWidth < 768) closeSidebar();
 
       const routeBox = document.getElementById('floating-route-info');
-      routeBox.classList.add('visible');
-      document.getElementById('route-text').innerHTML = `<i data-lucide="loader" style="width:16px;height:16px;" class="spin"></i> Calculating…`;
+      routeBox.classList.remove('opacity-0', 'pointer-events-none', 'translate-y-4');
+      document.getElementById('route-text').innerHTML = '<i data-lucide="loader" class="w-4 h-4 animate-spin"></i> Calculating...';
       lucide.createIcons();
 
       routingControl = L.Routing.control({
-        waypoints: [L.latLng(userLat, userLng), L.latLng(destLat, destLng)],
-        router: L.Routing.osrmv1({ language:'en', profile:'foot' }),
-        lineOptions: { styles: [{ color:'#0ea5e9', opacity:0.9, weight:5 }] },
+        waypoints: [ L.latLng(userLat, userLng), L.latLng(destLat, destLng) ],
+        router: L.Routing.osrmv1({ language: 'en', profile: 'foot' }),
+        lineOptions: { styles: [{color: '#0ea5e9', opacity: 0.9, weight: 5}] },
         fitSelectedRoutes: true,
-        show: false,
-        addWaypoints: false,
-        createMarker: () => null
-      }).on('routesfound', e => {
-        const s = e.routes[0].summary;
-        const dist = s.totalDistance < 1000 ? Math.round(s.totalDistance) + ' m' : (s.totalDistance/1000).toFixed(1) + ' km';
-        const time = Math.round(s.totalTime / 60) + ' min';
+        show: false, addWaypoints: false,
+        createMarker: function() { return null; }
+      }).on('routesfound', function(e) {
+        let summary = e.routes[0].summary;
+        let dist = summary.totalDistance < 1000 ? Math.round(summary.totalDistance) + ' m' : (summary.totalDistance / 1000).toFixed(1) + ' km';
+        let time = Math.round(summary.totalTime / 60) + ' min';
+        
         document.getElementById('route-text').innerHTML = `
-          <i data-lucide="footprints" style="width:15px;height:15px;color:#94a3b8;"></i> ${dist}
-          &nbsp;·&nbsp;
-          <i data-lucide="clock" style="width:15px;height:15px;color:#94a3b8;"></i> ${time}
+          <div class="flex items-center gap-1.5"><i data-lucide="footprints" class="w-4 h-4 text-slate-400"></i> ${dist}</div>
+          <div class="w-1 h-1 rounded-full bg-slate-300 dark:bg-slate-600"></div>
+          <div class="flex items-center gap-1.5"><i data-lucide="clock" class="w-4 h-4 text-slate-400"></i> ${time}</div>
         `;
         lucide.createIcons();
       }).addTo(map);
     };
 
-    function clearRoute() {
-      if (routingControl) { map.removeControl(routingControl); routingControl = null; }
-      document.getElementById('floating-route-info').classList.remove('visible');
+    window.clearRoute = function() {
+      if (routingControl) map.removeControl(routingControl);
+      routingControl = null;
+      document.getElementById('floating-route-info').classList.add('opacity-0', 'pointer-events-none', 'translate-y-4');
       map.flyTo(MAP_CENTER, 18);
-    }
-
-    document.getElementById('clearRouteBtn').addEventListener('click', clearRoute);
-
-    // Spinning loader animation
-    const style = document.createElement('style');
-    style.textContent = `
-      .spin { animation: spin360 1s linear infinite; }
-      @keyframes spin360 { from { transform: rotate(0deg); } to { transform: rotate(360deg); } }
-    `;
-    document.head.appendChild(style);
+    };
 
   </script>
 </body>
